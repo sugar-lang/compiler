@@ -451,7 +451,7 @@ public class Driver{
       }
       good = true;
     } finally {
-      log.endTask(good, "compilation succeeded", "compilation failed");
+      log.endTask(good);
     }
   }
 
