@@ -254,18 +254,13 @@ public class Driver{
     }
     
     try {
-      synchronized (processingListener) {
-        for (ProcessingListener listener : processingListener)
-          listener.processingStarts(sourceFile);
-      }
+      ProcessingListener.notifyProcessingStarts(Driver.class, processingListener, sourceFile);
     
       driver.process(declProvider, sourceFile, monitor);
       Driver.storeCaches(driver.environment);
     
-      synchronized (processingListener) {
-        for (ProcessingListener listener : processingListener)
-          listener.processingDone(driver.driverResult);
-      }
+      ProcessingListener.notifyProcessingDone(Driver.class, processingListener, driver.driverResult);
+      
     } catch (InterruptedException e) {
       // nothing
     } catch (Exception e) {
