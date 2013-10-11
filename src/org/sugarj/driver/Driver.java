@@ -1417,6 +1417,7 @@ public class Driver{
   
   public void setErrorMessage(IStrategoTerm toplevelDecl, String msg) {
     driverResult.logError(msg);
+    log.logErr(msg, Log.CORE);
     ATermCommands.setErrorMessage(toplevelDecl, msg);
   }
 
