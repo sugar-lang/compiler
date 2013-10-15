@@ -36,7 +36,7 @@ public class ModuleSystemCommands {
      */
     public static RelativePath importBinFile(String modulePath, Environment environment, AbstractBaseProcessor baseProcessor, Result driverResult) throws IOException {
       String ext = baseProcessor.getLanguage().getBinaryFileExtension();
-      if (ext != null)
+      if (ext == null)
         // language is interpreted
         ext = baseProcessor.getLanguage().getBaseFileExtension();
       RelativePath clazz = searchFile(modulePath, ext, environment, driverResult);
@@ -157,13 +157,9 @@ public class ModuleSystemCommands {
    * @throws IOException 
    */
   public static RelativePath searchFile(String relativePath, String fileExtension, Environment environment, Result driverResult) {
-    RelativePath p;
-    
-    p = searchFile(environment.createOutPath(relativePath + "." + fileExtension), driverResult);
+    RelativePath p = searchFile(environment.createOutPath(relativePath + "." + fileExtension), driverResult);
     if (p == null) {
-      p = searchFile(environment.createOutPath(relativePath + "." + fileExtension), driverResult);
-      if (p == null)
-          p = searchFileInSearchPath(relativePath, fileExtension, environment.getIncludePath(), driverResult);
+      p = searchFileInSearchPath(relativePath, fileExtension, environment.getIncludePath(), driverResult);
     }
     return p;
   }
@@ -217,13 +213,11 @@ public class ModuleSystemCommands {
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } finally {
-      /* URLClassLoader.close() is only available in Java 1.7.
       if (cl != null)
         try {
           cl.close();
         } catch (IOException e) {
         }
-      */
     }
     
     return null;
