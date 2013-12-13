@@ -51,7 +51,7 @@ public class Result {
   private Set<Path> circularDependencies = new HashSet<Path>();
   private Map<Path, Integer> generatedFileHashes = new HashMap<Path, Integer>();
   private Map<RelativePath, Integer> dependingFileHashes = new HashMap<RelativePath, Integer>();
-  private Set<IStrategoTerm> editorServices = new HashSet<IStrategoTerm>();
+  private List<IStrategoTerm> editorServices = new LinkedList<IStrategoTerm>();
   private List<String> collectedErrors = new LinkedList<String>();
   private Set<BadTokenException> parseErrors = new HashSet<BadTokenException>();
   private IStrategoTerm sugaredSyntaxTree = null;
@@ -211,7 +211,9 @@ public class Result {
     editorServices.add(service);
   }
   
-  public Set<IStrategoTerm> getEditorServices() {
+  public List<IStrategoTerm> getEditorServices() {
+    if (desugaringsFile != null && FileCommands.exists(desugaringsFile))
+      return ATermCommands.registerSemanticProvider(editorServices, desugaringsFile);
     return editorServices;
   }
   
@@ -348,9 +350,8 @@ public class Result {
     return parseTableFile;
   }
   
-  public void registerEditorDesugarings(Path jarfile) throws IOException {
+  public void registerEditorDesugarings(Path jarfile) {
     desugaringsFile = jarfile;
-    editorServices = new HashSet<IStrategoTerm>(ATermCommands.registerSemanticProvider(editorServices, jarfile));
   }
   
   public Path getDesugaringsFile() {
