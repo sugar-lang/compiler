@@ -65,7 +65,7 @@ import org.sugarj.driver.declprovider.TermToplevelDeclarationProvider;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
 import org.sugarj.stdlib.StdLib;
-import org.sugarj.transformations.analysis.AnalysisDataLibrary;
+import org.sugarj.transformations.analysis.InteropRegisterer;
 import org.sugarj.util.Pair;
 import org.sugarj.util.ProcessingListener;
 import org.sugarj.util.Renaming;
@@ -143,9 +143,11 @@ public class Driver{
     this.driverResult = new Result(env.doGenerateFiles() ? null : env.getParseBin());
     
     baseProcessor.setInterpreter(new HybridInterpreter());
-    baseProcessor.getInterpreter().addOperatorRegistry(new SugarJPrimitivesLibrary(this, environment, driverResult, monitor));
-    baseProcessor.getInterpreter().addOperatorRegistry(AnalysisDataLibrary.instance);
-
+    HybridInterpreter interp = baseProcessor.getInterpreter();
+    
+    interp.addOperatorRegistry(new SugarJPrimitivesLibrary(this, environment, driverResult, monitor));
+    InteropRegisterer.instance.register(interp.getContext(), interp.getCompiledContext());
+    
     try {      
       if (environment.getCacheDir() != null)
         FileCommands.createDir(environment.getCacheDir());
