@@ -352,7 +352,7 @@ public class Driver{
         stepped();
         
         IStrategoTerm analyzed = currentAnalyze(lastSugaredToplevelDecl);
-        analyzed = ATermCommands.copyTokens(lastSugaredToplevelDecl, analyzed);
+//        analyzed = ATermCommands.copyTokens(lastSugaredToplevelDecl, analyzed);
         lastSugaredToplevelDecl = analyzed;
         
         stepped();
