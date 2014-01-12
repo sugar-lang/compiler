@@ -354,13 +354,12 @@ public class Driver{
         
         stepped();
         
+        // ANALYZE the parsed top-level declaration
         IStrategoTerm analyzed = currentAnalyze(lastSugaredToplevelDecl);
-//        analyzed = ATermCommands.copyTokens(lastSugaredToplevelDecl, analyzed);
-        lastSugaredToplevelDecl = analyzed;
         
         stepped();
         
-        // DESUGAR the parsed top-level declaration
+        // DESUGAR the analyzed top-level declaration
         IStrategoTerm desugared = currentDesugar(analyzed);
         
         stepped();
