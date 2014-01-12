@@ -134,6 +134,8 @@ public class Driver{
   private AbstractBaseProcessor baseProcessor;
   private boolean definesNonBaseDec = false;
   
+  private AnalysisDataInterop analysisDataInterop;
+  
   
   public Driver(Environment env, AbstractBaseLanguage baseLang, List<Driver> currentlyProcessing) {
     this.environment = env;
@@ -146,7 +148,8 @@ public class Driver{
     HybridInterpreter interp = baseProcessor.getInterpreter();
     
     interp.addOperatorRegistry(new SugarJPrimitivesLibrary(this, environment, driverResult, monitor));
-    AnalysisDataInterop.instance.getInteropRegisterer().register(interp.getContext(), interp.getCompiledContext());
+    analysisDataInterop = new AnalysisDataInterop();
+    analysisDataInterop.createInteropRegisterer().register(interp.getContext(), interp.getCompiledContext());
     
     try {      
       if (environment.getCacheDir() != null)
@@ -1364,6 +1367,8 @@ public class Driver{
       ImploderAttachment.getTokenizer(term).setAst(term);
       ImploderAttachment.getTokenizer(term).initAstNodeBinding();
     }
+    
+    analysisDataInterop.storeAnalysisData(term);
     
     return term;
   }
