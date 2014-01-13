@@ -518,7 +518,7 @@ public class Driver{
       if (!(e instanceof StrategoException))
         e.printStackTrace();
 
-      setErrorMessage(toplevelDecl, msg);
+      setErrorMessage(lastSugaredToplevelDecl, msg);
       if (!sugaredBodyDecls.contains(lastSugaredToplevelDecl))
         sugaredBodyDecls.add(lastSugaredToplevelDecl);
     }
