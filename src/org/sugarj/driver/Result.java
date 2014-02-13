@@ -15,15 +15,15 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
-import org.sugarj.common.deps.Module;
-import org.sugarj.common.deps.Stamper;
+import org.sugarj.common.cleardep.CompilationUnit;
+import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
  */
-public class Result extends Module {
+public class Result extends CompilationUnit {
 
   /**
    *  This is a parse result if it was produced during parsing.

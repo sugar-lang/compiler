@@ -11,6 +11,7 @@ import org.sugarj.BaseLanguageRegistry;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
+import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
@@ -70,7 +71,7 @@ public class Main {
   // without running eclipse platform,
   // set up a default environment reasonable for command-line execution.
   private static Environment getConsoleEnvironment() {
-    Environment environment = new Environment(true, StdLib.stdLibDir);
+    Environment environment = new Environment(true, StdLib.stdLibDir, Stamper.DEFAULT);
     environment.setCacheDir(new RelativePath(new AbsolutePath(FileCommands.TMP_DIR), ".sugarjcache"));
     environment.addToSourcePath(new AbsolutePath("."));
     environment.setAtomicImportParsing(true);
