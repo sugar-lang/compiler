@@ -166,7 +166,7 @@ public class ModuleSystemCommands {
 
   private static RelativePath searchFile(RelativePath file, Result driverResult) {
     if (driverResult != null)
-      driverResult.addFileDependency(file);
+      driverResult.addExternalFileDependency(file);
     if (file.getFile().exists())
       return file;
     
@@ -201,7 +201,7 @@ public class ModuleSystemCommands {
     
     RelativePath p = new RelativePath(base, relativePath + "." + extension);
     if (driverResult != null)
-      driverResult.addFileDependency(p);
+      driverResult.addExternalFileDependency(p);
     if (p.getFile().exists())
       return p;
     
@@ -229,8 +229,11 @@ public class ModuleSystemCommands {
     
     if (dep != null)
       try {
-        res = Result.readDependencyFile(dep);
+        res = Result.read(environment.getStamper(), dep);
       } catch (IOException e) {
+        log.logErr("could not read dependency file " + dep, Log.DETAIL);
+      } catch (ClassNotFoundException e) {
+        e.printStackTrace();
         log.logErr("could not read dependency file " + dep, Log.DETAIL);
       }
     

@@ -7,11 +7,13 @@ import java.io.ObjectOutput;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
+import org.sugarj.common.deps.Stamper;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 
@@ -28,6 +30,7 @@ import org.sugarj.common.path.RelativePath;
 public class ModuleKey implements Externalizable {
 
   private boolean checkGet;
+  
   public Map<String, Integer> moduleDeps;
   public String body;
   
@@ -41,20 +44,20 @@ public class ModuleKey implements Externalizable {
     this.body = body;
   }
   
-  public ModuleKey(Map<Path, Integer> dependentFiles, Pattern pat, IStrategoTerm module) throws IOException {
-    this.moduleDeps = new HashMap<String, Integer>();
+  public ModuleKey(Stamper stamper, Set<Path> dependentFiles, Pattern pat, IStrategoTerm module) throws IOException {
+    this.moduleDeps = new HashMap<>();
     
     this.body = ATermCommands.atermToString(module);
     
-    for (Map.Entry<Path, Integer> entry : dependentFiles.entrySet())
-      if (pat == null || pat.matcher(entry.getKey().getAbsolutePath()).matches())
-        if (FileCommands.exists(entry.getKey())) {
+    for (Path p : dependentFiles)
+      if (pat == null || pat.matcher(p.getAbsolutePath()).matches())
+        if (FileCommands.exists(p)) {
           String cachePath;
-          if (entry.getKey() instanceof RelativePath)
-            cachePath = ((RelativePath) entry.getKey()).getRelativePath();
+          if (p instanceof RelativePath)
+            cachePath = ((RelativePath) p).getRelativePath();
           else
-            cachePath = entry.getKey().getAbsolutePath();
-          moduleDeps.put(cachePath, entry.getValue());
+            cachePath = p.getAbsolutePath();
+          moduleDeps.put(cachePath, stamper.stampOf(p));
         }
   }
   
@@ -76,7 +79,7 @@ public class ModuleKey implements Externalizable {
 
   @Override
   public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-    moduleDeps = new HashMap<String, Integer>();
+    moduleDeps = new HashMap<>();
     int entries = in.readInt();
     for (int i = 0; i < entries; i++) {
       moduleDeps.put((String) in.readObject(), in.readInt());

@@ -120,9 +120,9 @@ public class ImportCommands {
       String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
       Result transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath, environment);
   
-      if (transformedModelResult != null && transformedModelResult.isUpToDate(environment)) {
+      if (transformedModelResult != null && transformedModelResult.isConsistent()) {
         // result of transformation is already up-to-date, nothing to do here.
-        driverResult.addDependency(transformedModelResult);
+        driverResult.addModuleDependency(transformedModelResult);
         return Pair.create(transformedModelPath, false);
       }
       else {
@@ -147,12 +147,12 @@ public class ImportCommands {
    * @param model Path to the *.model file that contains the Aterm model.
    * @param transformationPath Path to the *.str transformation.
    */
-  private static IStrategoTerm executeTransformation(RelativePath model, RelativePath transformationPath, IStrategoTerm toplevelDecl, Environment environment, STRCommands str, Driver driver) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
+  private IStrategoTerm executeTransformation(RelativePath model, RelativePath transformationPath, IStrategoTerm toplevelDecl, Environment environment, STRCommands str, Driver driver) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
     IStrategoTerm modelTerm = ATermCommands.atermFromFile(model.getAbsolutePath());
     String strat = "main-" + FileCommands.dropExtension(transformationPath.getRelativePath()).replace('/', '_');
     Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment);
     
-    Path trans = str.compile(transformationPath, strat, transformationResult.getTransitiveFileDependencies());
+    Path trans = str.compile(transformationPath, strat, transformationResult.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
     
     IStrategoTerm transformationInput = 
         ATermCommands.makeTuple(
@@ -161,7 +161,7 @@ public class ImportCommands {
             ATermCommands.makeString(FileCommands.dropExtension(transformationPath.getRelativePath()), null));
 
     try {
-      IStrategoTerm transformedTerm = str.assimilate(strat, trans, transformationInput);
+      IStrategoTerm transformedTerm = STRCommands.assimilate(strat, trans, transformationInput, baseProcessor.getInterpreter());
       return transformedTerm;
     } catch (StrategoException e) {
       String msg = "Failed to apply transformation " + transformationPath.getRelativePath() + " to model " + model.getRelativePath() + ": " + e.getMessage();

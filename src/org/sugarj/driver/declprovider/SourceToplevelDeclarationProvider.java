@@ -30,14 +30,18 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   private Driver driver;
   private String lastRemainingInput;
   private String remainingInput;
-  private final int hash;
+  private final int stamp;
   private RetractableTreeBuilder treeBuilder;
 
-  public SourceToplevelDeclarationProvider(Driver driver, String source) {
+  public SourceToplevelDeclarationProvider(Driver driver, String source) throws IOException {
     this.driver = driver;
     this.remainingInput = source;
     this.treeBuilder = new RetractableTreeBuilder();
-    hash = source.hashCode();
+    
+    Path tmp = FileCommands.newTempFile("");
+    FileCommands.writeToFile(tmp, source);
+    stamp = driver.getEnvironment().getStamper().stampOf(tmp);
+    FileCommands.delete(tmp);
     // XXX need to load ANY parse table, preferably an empty one.
   }
 
@@ -147,8 +151,8 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   }
 
   @Override
-  public int getSourceHashCode() {
-    return hash;
+  public int getSourceStamp() {
+    return stamp;
   }
 
   @Override

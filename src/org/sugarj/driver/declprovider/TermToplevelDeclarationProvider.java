@@ -7,6 +7,8 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.imploder.IToken;
 import org.spoofax.jsglr.client.imploder.ImploderAttachment;
 import org.sugarj.common.ATermCommands;
+import org.sugarj.common.Environment;
+import org.sugarj.common.path.Path;
 
 /**
  * @author jp
@@ -16,9 +18,9 @@ public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvi
 
   private List<IStrategoTerm> terms;
   int index;
-  private final int hash;
+  private final int stamp;
   
-  public TermToplevelDeclarationProvider(IStrategoTerm source) {
+  public TermToplevelDeclarationProvider(IStrategoTerm source, Path sourceFile, Environment env) {
     IStrategoTerm packageDecOption = ATermCommands.getApplicationSubterm(source, "CompilationUnit", 0);
     IStrategoTerm importDecs = ATermCommands.getApplicationSubterm(source, "CompilationUnit", 1);
     IStrategoTerm bodyDecs = ATermCommands.getApplicationSubterm(source, "CompilationUnit", 2);
@@ -31,7 +33,7 @@ public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvi
     terms.addAll(ATermCommands.getList(importDecs));
     terms.addAll(ATermCommands.getList(bodyDecs));
     
-    hash = ATermCommands.atermToString(source).hashCode();
+    stamp = env.getStamper().stampOf(sourceFile);
   }
   
   @Override
@@ -56,8 +58,8 @@ public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvi
   }
 
   @Override
-  public int getSourceHashCode() {
-    return hash;
+  public int getSourceStamp() {
+    return stamp;
   }
 
   @Override
