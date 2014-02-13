@@ -167,6 +167,8 @@ public class Result extends CompilationUnit {
   
   @Override
   public void writeEntity(ObjectOutputStream oos) throws IOException {
+    super.writeEntity(oos);
+    
 //    oos.writeObject(parseResultPath);
     
     oos.writeObject(deferredSourceFiles = Collections.unmodifiableMap(deferredSourceFiles));
@@ -175,8 +177,9 @@ public class Result extends CompilationUnit {
   @Override
   @SuppressWarnings("unchecked")
   public void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-//    parseResultPath = (Path) ois.readObject();
+    super.readEntity(ois);
     
+//    parseResultPath = (Path) ois.readObject();
     deferredSourceFiles =  (Map<Path, String>) ois.readObject();
   }
   
