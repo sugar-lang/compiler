@@ -216,7 +216,7 @@ public class Driver {
   
   public static Result run(String source, RelativePath sourceFile, Environment env, IProgressMonitor monitor, AbstractBaseLanguage baseLang, List<Driver> currentlyProcessing) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
     Driver driver = new Driver(env, baseLang, currentlyProcessing);
-    return run(driver, new SourceToplevelDeclarationProvider(driver, source), sourceFile, monitor);
+    return run(driver, new SourceToplevelDeclarationProvider(driver, source, sourceFile), sourceFile, monitor);
   }
 
   public static Result run(IStrategoTerm source, RelativePath sourceFile, Environment env, IProgressMonitor monitor, AbstractBaseLanguage baseLang, List<Driver> currentlyProcessing) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
@@ -276,8 +276,8 @@ public class Driver {
     } finally {
       pendingRuns.remove(sourceFile);
       if (!driver.environment.doGenerateFiles()) {
-        Path binDep = new RelativePath(driver.environment.getCompileBin(), modulePath + ".dep");
-        Result.cacheInMemory(binDep, driver.driverResult);
+        Path binDep = driver.environment.createOutPath(modulePath + ".dep");
+        driver.driverResult.cacheInMemory(binDep);
       }
     }
 
@@ -342,7 +342,7 @@ public class Driver {
       init(declProvider, sourceFile, monitor);
       driverResult.addSourceArtifact(sourceFile, declProvider.getSourceStamp());
       
-      baseProcessor.init(sourceFile, environment);
+      baseProcessor.init(sourceFile.getRelativePath(), environment);
 
       depOutFile = environment.createOutPath(FileCommands.dropExtension(sourceFile.getRelativePath()) + ".dep");
       // clearGeneratedStuff();

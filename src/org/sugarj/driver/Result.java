@@ -234,25 +234,4 @@ public class Result extends CompilationUnit {
 //    return res;
   }
   
-  public static void cacheInMemory(Path dep, Result result) {
-    // FIXME
-//    synchronized (results) {
-//      results.put(dep, result);
-//      results.put(dep, new SoftReference<Result>(result));
-//    }
-  }
- 
-//  public static Result getCachedResult(Path dep) throws IOException {
-//    Result result = null;
-//    synchronized (results) {
-//      result = results.get(dep);
-////      SoftReference<Result> ref = results.get(dep);
-////      if (ref != null)
-////        result = ref.get();
-//    }
-//    if (result != null && !result.hasPersistentVersionChanged())
-//      return result;
-//    return null;
-//  }
-
 }
