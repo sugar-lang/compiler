@@ -292,7 +292,9 @@ public class Driver {
   
     depOutFile = null;
   
-    this.sourceFiles.add(sourceFile);
+    sourceFiles = new HashSet<>();
+    sourceFiles.add(sourceFile);
+    
     this.declProvider = declProvider;
     
     currentGrammarSDF = baseLanguage.getInitGrammar();
