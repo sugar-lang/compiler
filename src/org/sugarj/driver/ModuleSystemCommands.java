@@ -199,11 +199,11 @@ public class ModuleSystemCommands {
       relativePath = relativePath.substring(base.getAbsolutePath().length() + sepOffset);
     }
     
-    RelativePath p = new RelativePath(base, relativePath + "." + extension);
-    if (driverResult != null)
-      driverResult.addExternalFileDependency(p);
-    if (p.getFile().exists())
-      return p;
+    if (base.getFile().isDirectory()) {
+      RelativePath p = new RelativePath(base, relativePath + "." + extension);
+      if (searchFile(p, driverResult) != null)
+        return p;
+    }
     
     URLClassLoader cl = null;
     try {

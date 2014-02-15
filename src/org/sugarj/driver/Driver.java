@@ -1271,29 +1271,38 @@ public class Driver {
     if (strCaches == null || force)
       strCaches = new HashMap<Path, Map<String, ModuleKeyCache<Path>>>();
     
-    ObjectInputStream sdfIn = null;
-    ObjectInputStream strIn = null;
-    try{
-      sdfIn = new ObjectInputStream(new FileInputStream(sdfCachePath.getFile()));
-      if (!sdfCaches.containsKey(environment.getCacheDir())) {
-        Map<String, ModuleKeyCache<Path>> sdfLocalCaches = (Map<String, ModuleKeyCache<Path>>) sdfIn.readObject();
-        sdfCaches.put(environment.getCacheDir(), sdfLocalCaches);
+    if (!sdfCaches.containsKey(environment.getCacheDir()) || force) {
+      ObjectInputStream sdfIn = null;
+      try {
+        sdfIn = new ObjectInputStream(new FileInputStream(sdfCachePath.getFile()));
+        if (!sdfCaches.containsKey(environment.getCacheDir())) {
+          Map<String, ModuleKeyCache<Path>> sdfLocalCaches = (Map<String, ModuleKeyCache<Path>>) sdfIn.readObject();
+          sdfCaches.put(environment.getCacheDir(), sdfLocalCaches);
+        }
+      } catch (Exception e) {
+//        e.printStackTrace();
+        sdfCaches.put(environment.getCacheDir(), new HashMap<String, ModuleKeyCache<Path>>());
+      } finally {
+        if (sdfIn != null)
+          sdfIn.close();
       }
-      strIn = new ObjectInputStream(new FileInputStream(strCachePath.getFile()));
-      if (!strCaches.containsKey(environment.getCacheDir())) {
-        Map<String, ModuleKeyCache<Path>> strLocalCaches = (Map<String, ModuleKeyCache<Path>>) strIn.readObject();
-        strCaches.put(environment.getCacheDir(), strLocalCaches);
+    }
+    
+    if (!strCaches.containsKey(environment.getCacheDir()) || force) {
+      ObjectInputStream strIn = null;
+      try {
+        strIn = new ObjectInputStream(new FileInputStream(strCachePath.getFile()));
+        if (!strCaches.containsKey(environment.getCacheDir())) {
+          Map<String, ModuleKeyCache<Path>> strLocalCaches = (Map<String, ModuleKeyCache<Path>>) strIn.readObject();
+          strCaches.put(environment.getCacheDir(), strLocalCaches);
+        }
+      } catch (Exception e) {
+//        e.printStackTrace();
+        strCaches.put(environment.getCacheDir(), new HashMap<String, ModuleKeyCache<Path>>());
+      } finally {
+        if (strIn != null)
+          strIn.close();
       }
-    } catch (Exception e) {
-      sdfCaches.put(environment.getCacheDir(), new HashMap<String, ModuleKeyCache<Path>>());
-      strCaches.put(environment.getCacheDir(), new HashMap<String, ModuleKeyCache<Path>>());
-      for (File f : environment.getCacheDir().getFile().listFiles())
-        f.delete();
-    } finally {
-      if (sdfIn != null)
-        sdfIn.close();
-      if (strIn != null)
-        strIn.close();
     }
   }
 

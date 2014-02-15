@@ -50,15 +50,14 @@ public class ModuleKey implements Externalizable {
     this.body = ATermCommands.atermToString(module);
     
     for (Path p : dependentFiles)
-      if (pat == null || pat.matcher(p.getAbsolutePath()).matches())
-        if (FileCommands.exists(p)) {
-          String cachePath;
-          if (p instanceof RelativePath)
-            cachePath = ((RelativePath) p).getRelativePath();
-          else
-            cachePath = p.getAbsolutePath();
-          moduleDeps.put(cachePath, stamper.stampOf(p));
-        }
+      if ((pat == null || pat.matcher(p.getAbsolutePath()).matches()) && FileCommands.exists(p)) {
+        String cachePath;
+        if (p instanceof RelativePath)
+          cachePath = ((RelativePath) p).getRelativePath();
+        else
+          cachePath = p.getAbsolutePath();
+        moduleDeps.put(cachePath, stamper.stampOf(p));
+      }
   }
   
   public boolean equals(Object o) {
