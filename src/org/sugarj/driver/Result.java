@@ -40,18 +40,17 @@ public class Result extends CompilationUnit {
   private boolean failed = false;
   
   /**
-   * deferred source files (*.sugj) -> 
-   * to-be-compiled source files (e.g., *.java + generated SourceFileContent) 
+   * maps from source artifacts to generated source files 
    */
-  private Map<Path, String> deferredSourceFiles = new HashMap<>();
+  private Map<Set<? extends Path>, Set<? extends Path>> deferredSourceFiles = new HashMap<>();
   
   public Result() { /* for serialization only */ }
-  public Result(Stamper stamper, Path parseResultPath) {
-    super(stamper);
-    this.parseResultPath = parseResultPath;
-  }
+//  public Result(Stamper stamper, Path parseResultPath) {
+//    super(stamper);
+//    this.parseResultPath = parseResultPath;
+//  }
   
-  public void generateFile(RelativePath file, String content) throws IOException {
+  public void generateFile(Path file, String content) throws IOException {
     FileCommands.writeToFile(file, content);
     addGeneratedFile(file);
   }
@@ -103,10 +102,9 @@ public class Result extends CompilationUnit {
     return desugaredSyntaxTree;
   }
   
-  void delegateCompilation(Result delegate, Path compileFile, String source, boolean hasNonBaseDec) {
+  void delegateCompilation(Result delegate, Set<Path> compileFiles,  boolean hasNonBaseDec) {
     delegate.deferredSourceFiles.putAll(deferredSourceFiles);
-    if (!source.isEmpty() || hasNonBaseDec)
-      delegate.deferredSourceFiles.put(compileFile, source);
+    delegate.deferredSourceFiles.put(getSourceArtifacts(), compileFiles);
   }
   
   boolean isDelegateOf(Set<? extends Path> sourceFiles) {
@@ -152,8 +150,11 @@ public class Result extends CompilationUnit {
     return false;
   }
 
-  public Map<Path, String> getDeferredSourceFiles() {
-    return deferredSourceFiles;
+  public Set<Path> getDeferredSourceFiles() {
+    Set<Path> res = new HashSet<>();
+    for (Set<? extends Path> s : deferredSourceFiles.values())
+      res.addAll(s);
+    return res;
   }
 
 
@@ -180,11 +181,15 @@ public class Result extends CompilationUnit {
     super.readEntity(ois);
     
 //    parseResultPath = (Path) ois.readObject();
-    deferredSourceFiles =  (Map<Path, String>) ois.readObject();
+    deferredSourceFiles =   (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
   }
   
   public static Result read(Stamper stamper, Path p) throws ClassNotFoundException, IOException {
     return read(Result.class, stamper, p);
+  }
+  
+  public static Result create(Stamper stamper, Path p) throws IOException {
+    return create(Result.class, stamper, p);
   }
   
   /**

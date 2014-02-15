@@ -143,14 +143,6 @@ public class Driver {
     this.baseLanguage = baseLang;
     this.baseProcessor = baseLang.createNewProcessor();
     this.currentlyProcessing = currentlyProcessing;
-    this.driverResult = new Result(env.getStamper(), env.doGenerateFiles() ? null : env.getParseBin());
-    
-    baseProcessor.setInterpreter(new HybridInterpreter());
-    HybridInterpreter interp = baseProcessor.getInterpreter();
-    
-    interp.addOperatorRegistry(new SugarJPrimitivesLibrary(this, environment, driverResult, monitor));
-    analysisDataInterop = new AnalysisDataInterop();
-    analysisDataInterop.createInteropRegisterer().register(interp.getContext(), interp.getCompiledContext());
     
     try {      
       if (environment.getCacheDir() != null)
@@ -275,10 +267,6 @@ public class Driver {
       org.strategoxt.imp.runtime.Environment.logException(e);
     } finally {
       pendingRuns.remove(sourceFile);
-      if (!driver.environment.doGenerateFiles()) {
-        Path binDep = driver.environment.createOutPath(modulePath + ".dep");
-        driver.driverResult.cacheInMemory(binDep);
-      }
     }
 
     return driver.driverResult;
@@ -290,12 +278,23 @@ public class Driver {
     if (!environment.getIncludePath().contains(baseLangPath))
       environment.addToIncludePath(baseLangPath);
   
-    depOutFile = null;
-  
+    depOutFile = environment.createOutPath(FileCommands.dropExtension(sourceFile.getRelativePath()) + ".dep");
+
     sourceFiles = new HashSet<>();
     sourceFiles.add(sourceFile);
     
     this.declProvider = declProvider;
+    
+    this.driverResult = Result.create(environment.getStamper(), depOutFile);
+    //  new Result(env.getStamper(), env.doGenerateFiles() ? null : env.getParseBin());
+    
+    baseProcessor.setInterpreter(new HybridInterpreter());
+    HybridInterpreter interp = baseProcessor.getInterpreter();
+    
+    interp.addOperatorRegistry(new SugarJPrimitivesLibrary(this, environment, driverResult, monitor));
+    analysisDataInterop = new AnalysisDataInterop();
+    analysisDataInterop.createInteropRegisterer().register(interp.getContext(), interp.getCompiledContext());
+
     
     currentGrammarSDF = baseLanguage.getInitGrammar();
     currentGrammarModule = baseLanguage.getInitGrammarModuleName();
@@ -341,10 +340,8 @@ public class Driver {
     try {
       init(declProvider, sourceFile, monitor);
       driverResult.addSourceArtifact(sourceFile, declProvider.getSourceStamp());
-      
       baseProcessor.init(sourceFile.getRelativePath(), environment);
 
-      depOutFile = environment.createOutPath(FileCommands.dropExtension(sourceFile.getRelativePath()) + ".dep");
       // clearGeneratedStuff();
 
       initEditorServices();
@@ -400,6 +397,8 @@ public class Driver {
       if (circularLinks.isEmpty())
         compileGeneratedFiles();
       else {
+        driverResult.generateFile(baseProcessor.getGeneratedSourceFile(), baseProcessor.getGeneratedSource());
+        
         Result delegate = null;
         for (Driver dr : currentlyProcessing)
           if (circularLinks.contains(dr.sourceFiles)) {
@@ -407,7 +406,7 @@ public class Driver {
             break;
           }
         if (delegate != null)
-          driverResult.delegateCompilation(delegate, baseProcessor.getGeneratedSourceFile(), baseProcessor.getGeneratedSource(), definesNonBaseDec);
+          driverResult.delegateCompilation(delegate, Collections.singleton(baseProcessor.getGeneratedSourceFile()), definesNonBaseDec);
         else if (!dependsOnModel)
           throw new IllegalStateException("Could not delegate compilation of circular dependency to other compiler instance.");
       }
@@ -425,15 +424,15 @@ public class Driver {
         driverResult.registerEditorDesugarings(currentTransProg);
       }
 
-     driverResult.write(depOutFile);
-
       success = true;
     } 
     finally {
       log.endTask(success, "done processing " + sourceFile, "failed to process " + sourceFile);
-      driverResult.setFailed(!success);
       currentlyProcessing.remove(this);
       environment.setRenamings(originalRenamings);
+
+      driverResult.setFailed(!success);
+      driverResult.write(depOutFile);
     }
   }
 
@@ -850,7 +849,7 @@ public class Driver {
       }
       
       if (!isCircularImport && res != null) {
-        if (res.getPersistentPath() == null || res.hasPersistentVersionChanged())
+        if (res.hasPersistentVersionChanged())
           setErrorMessage("Result is inconsitent with persistent version.");
         driverResult.addModuleDependency(res);
       }
