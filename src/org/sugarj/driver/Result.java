@@ -108,7 +108,10 @@ public class Result extends CompilationUnit {
   }
   
   boolean isDelegateOf(Set<? extends Path> sourceFiles) {
-    return !Collections.disjoint(deferredSourceFiles.keySet(), sourceFiles);
+    for (Set<? extends Path> deferred : deferredSourceFiles.keySet())
+      if (!Collections.disjoint(deferred, sourceFiles))
+        return true;
+    return false;
   }
   
   void resetDelegation() {
