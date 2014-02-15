@@ -175,7 +175,7 @@ public class Result extends CompilationUnit {
     
 //    oos.writeObject(parseResultPath);
     
-    oos.writeObject(deferredSourceFiles = Collections.unmodifiableMap(deferredSourceFiles));
+//    oos.writeObject(deferredSourceFiles = Collections.unmodifiableMap(deferredSourceFiles));
   }
   
   @Override
@@ -184,7 +184,7 @@ public class Result extends CompilationUnit {
     super.readEntity(ois);
     
 //    parseResultPath = (Path) ois.readObject();
-    deferredSourceFiles =   (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
+//    deferredSourceFiles =   (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
   }
   
   public static Result read(Stamper stamper, Path p) throws ClassNotFoundException, IOException {
