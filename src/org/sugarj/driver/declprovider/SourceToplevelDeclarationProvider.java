@@ -33,12 +33,12 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   private final int stamp;
   private RetractableTreeBuilder treeBuilder;
 
-  public SourceToplevelDeclarationProvider(Driver driver, String source, Path fileContainingActualSource) throws IOException {
+  public SourceToplevelDeclarationProvider(Driver driver, String source, Path sourceFile) throws IOException {
     this.driver = driver;
     this.remainingInput = source;
     this.treeBuilder = new RetractableTreeBuilder();
     
-    stamp = driver.getEnvironment().getStamper().stampOf(fileContainingActualSource);
+    stamp = driver.getEnvironment().getStamper().stampOf(sourceFile);
   }
 
   @Override

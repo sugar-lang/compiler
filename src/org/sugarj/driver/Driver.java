@@ -226,29 +226,28 @@ public class Driver {
       pending.getValue().interrupt();
     }
 
-    if (pending == null) {
-      Result result = ModuleSystemCommands.locateResult(modulePath, driver.environment);
-      
-      boolean isUpToDate = result != null && result.isConsistent();
-      if (isUpToDate) {
-        if (driver.environment.doGenerateFiles() && result.isParseResult()) {
-          Log.log.beginTask("Moving result", Log.DETAIL);
-          try {
-          result = result.moveTo(driver.environment.getBin(), false);
-          } finally {
-            Log.log.endTask();
-          }
-        }
-        
-        if (driver.environment.doGenerateFiles() || result.getSugaredSyntaxTree() != null)
-          return result;
-      }
-    }
+//    if (pending == null) {
+//      Result result = ModuleSystemCommands.locateResult(modulePath, driver.environment);
+//      
+//      boolean isUpToDate = result != null && result.isConsistent();
+//      if (isUpToDate) {
+//        if (driver.environment.doGenerateFiles() && result.isParseResult()) {
+//          Log.log.beginTask("Moving result", Log.DETAIL);
+//          try {
+//          result = result.moveTo(driver.environment.getBin(), false);
+//          } finally {
+//            Log.log.endTask();
+//          }
+//        }
+//        
+//        if (driver.environment.doGenerateFiles() || result.getSugaredSyntaxTree() != null)
+//          return result;
+//      }
+//    }
     
     if (pending == null)
       putPendingRun(sourceFile, declProvider, driver);
-    
-    if (pending != null) {
+    else {
       waitForPending(sourceFile);
       return run(driver, declProvider, sourceFile, monitor);
     }

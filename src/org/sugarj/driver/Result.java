@@ -30,25 +30,35 @@ public class Result extends CompilationUnit {
    */
   private Path parseResultPath;
 
-  private List<IStrategoTerm> editorServices = new LinkedList<IStrategoTerm>();
-  private List<String> collectedErrors = new LinkedList<String>();
-  private Set<BadTokenException> parseErrors = new HashSet<BadTokenException>();
-  private IStrategoTerm sugaredSyntaxTree = null;
+  private List<IStrategoTerm> editorServices;
+  private List<String> collectedErrors;
+  private Set<BadTokenException> parseErrors;
+  private IStrategoTerm sugaredSyntaxTree;
   private IStrategoTerm desugaredSyntaxTree;
   private Path parseTableFile;
   private Path desugaringsFile;
-  private boolean failed = false;
+  private boolean failed;
   
   /**
    * maps from source artifacts to generated source files 
    */
-  private Map<Set<? extends Path>, Set<? extends Path>> deferredSourceFiles = new HashMap<>();
+  private Map<Set<? extends Path>, Set<? extends Path>> deferredSourceFiles;
   
   public Result() { /* for serialization only */ }
-//  public Result(Stamper stamper, Path parseResultPath) {
-//    super(stamper);
-//    this.parseResultPath = parseResultPath;
-//  }
+  
+  @Override
+  protected void init() {
+    super.init();
+    editorServices = new LinkedList<IStrategoTerm>();
+    collectedErrors = new LinkedList<String>();
+    parseErrors = new HashSet<BadTokenException>();
+    sugaredSyntaxTree = null;
+    desugaredSyntaxTree = null;
+    parseTableFile = null;
+    desugaringsFile = null;
+    failed = false;
+    deferredSourceFiles = new HashMap<>();
+  }
   
   public void generateFile(Path file, String content) throws IOException {
     FileCommands.writeToFile(file, content);
