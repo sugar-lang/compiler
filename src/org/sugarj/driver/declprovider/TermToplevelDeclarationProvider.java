@@ -9,6 +9,7 @@ import org.spoofax.jsglr.client.imploder.ImploderAttachment;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.path.Path;
+import org.sugarj.driver.Driver;
 
 /**
  * @author jp
@@ -18,7 +19,6 @@ public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvi
 
   private List<IStrategoTerm> terms;
   int index;
-  private final int stamp;
   
   public TermToplevelDeclarationProvider(IStrategoTerm source, Path sourceFile, Environment env) {
     IStrategoTerm packageDecOption = ATermCommands.getApplicationSubterm(source, "CompilationUnit", 0);
@@ -32,8 +32,6 @@ public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvi
       terms.add(ATermCommands.getApplicationSubterm(packageDecOption, "Some", 0));
     terms.addAll(ATermCommands.getList(importDecs));
     terms.addAll(ATermCommands.getList(bodyDecs));
-    
-    stamp = env.getStamper().stampOf(sourceFile);
   }
   
   @Override
@@ -58,15 +56,15 @@ public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvi
   }
 
   @Override
-  public int getSourceStamp() {
-    return stamp;
-  }
-
-  @Override
   public IToken getStartToken() {
     if (!terms.isEmpty())
       return ImploderAttachment.getLeftToken(terms.get(0));
     return null;
+  }
+
+  @Override
+  public void setDriver(Driver driver) {
+    // this decl provider does not need the driver
   }
   
 }

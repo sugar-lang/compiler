@@ -15,6 +15,7 @@ import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
+import org.sugarj.driver.DriverParameters;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Result;
 import org.sugarj.stdlib.StdLib;
@@ -51,7 +52,7 @@ public class Main {
         if (null == lang)
           throw new RuntimeException("Unknown file extension \"" + FileCommands.getExtension(sourceFile) + "\".");
         
-        Result res = Driver.run(sourceFile, environment, monitor, lang);
+        Result res = Driver.run(DriverParameters.create(environment, lang, sourceFile, monitor));
     
         if (!DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath()))
           throw new RuntimeException("compilation of " + sourceFile + " failed");

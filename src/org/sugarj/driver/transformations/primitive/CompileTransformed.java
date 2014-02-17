@@ -140,7 +140,7 @@ class CompileTransformed extends AbstractPrimitive {
       }
   
       if (res.getPersistentPath() == null)
-        res.write(FileCommands.newTempFile("dep"));
+        res.write();
       Collection<Path> transformedModelDeps = res.getCircularFileDependencies();
       TreeSet<String> failed = new TreeSet<String>();
       

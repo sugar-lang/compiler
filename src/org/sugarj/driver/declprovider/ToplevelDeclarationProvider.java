@@ -7,6 +7,7 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.InvalidParseTableException;
 import org.spoofax.jsglr.client.imploder.IToken;
 import org.spoofax.jsglr.shared.SGLRException;
+import org.sugarj.driver.Driver;
 
 /**
  * @author jp
@@ -22,6 +23,6 @@ public interface ToplevelDeclarationProvider {
 
   public void retract(IStrategoTerm term);
   public boolean hasNextToplevelDecl();
-  public int getSourceStamp();
   public IToken getStartToken();
+  public void setDriver(Driver driver);
 }

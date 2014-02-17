@@ -30,15 +30,15 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   private Driver driver;
   private String lastRemainingInput;
   private String remainingInput;
-  private final int stamp;
   private RetractableTreeBuilder treeBuilder;
 
-  public SourceToplevelDeclarationProvider(Driver driver, String source, Path sourceFile) throws IOException {
-    this.driver = driver;
+  public SourceToplevelDeclarationProvider(String source, Path sourceFile) {
     this.remainingInput = source;
     this.treeBuilder = new RetractableTreeBuilder();
-    
-    stamp = driver.getEnvironment().getStamper().stampOf(sourceFile);
+  }
+  
+  public void setDriver(Driver driver) {
+    this.driver = driver;
   }
 
   @Override
@@ -144,11 +144,6 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   @Override
   public boolean hasNextToplevelDecl() {
     return !remainingInput.isEmpty();
-  }
-
-  @Override
-  public int getSourceStamp() {
-    return stamp;
   }
 
   @Override
