@@ -287,18 +287,7 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    Map<RelativePath, Integer> editedSourceFiles = new HashMap<>();
-    
-    for (RelativePath sourceFile : params.sourceFiles) {
-      String editedSource = params.editedSources.get(sourceFile);
-      if (editedSource != null) {
-        Path editedSourcePath = new RelativePath(params.env.getParseBin(), sourceFile.getRelativePath());
-        FileCommands.writeToFile(editedSourcePath, editedSource);
-        editedSourceFiles.put(sourceFile, params.env.getStamper().stampOf(editedSourcePath));
-      }
-    }
-    
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, parseDep, params.sourceFiles, editedSourceFiles);
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, parseDep, params.sourceFiles, editedSourceStamps(params.env, params.editedSources));
     
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
@@ -785,10 +774,10 @@ public class Driver {
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
       Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-      Result res = Result.read(params.env.getStamper(), compileDep, editedDep, editedSourceStamps(params.editedSources));
+      Result res = Result.read(params.env.getStamper(), compileDep, editedDep, editedSourceStamps(params.env, params.editedSources));
       
       Set<RelativePath> importSourceFiles;
-      if (res != null && res.getSourceArtifacts().isEmpty())
+      if (res != null && !res.getSourceArtifacts().isEmpty())
         importSourceFiles = res.getSourceArtifacts();
       else {
         importSourceFiles = new HashSet<>();
@@ -800,10 +789,10 @@ public class Driver {
       boolean sourceFileAvailable = !importSourceFiles.isEmpty();
       boolean requiresUpdate = res == null ||
 //                               !Collections.disjoint(pendingInputFiles, res.getSourceArtifacts()) ||
-                               !res.isConsistent(editedSourceStamps(params.editedSources)) || 
+                               !res.isConsistent(editedSourceStamps(params.env, params.editedSources)) || 
                                params.env.doGenerateFiles() && res.isParseResult();
       
-      if (sourceFileAvailable && requiresUpdate && getCircularImportResult(importSourceFiles) != null) {
+      if (getCircularImportResult(importSourceFiles) != null) {
         // Circular import. Assume source file does not provide syntactic sugar.
         log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
         baseProcessor.processModuleImport(toplevelDecl);
@@ -850,13 +839,6 @@ public class Driver {
     return isCircularImport;
   }
   
-  private Map<RelativePath, Integer> editedSourceStamps(Map<RelativePath, String> editedSources) {
-    Map<RelativePath, Integer> stamps = new HashMap<>();
-    for (RelativePath p : editedSources.keySet())
-      stamps.put(p, params.env.getStamper().stampOf(p));
-    return stamps;
-  }
-
   /**
    * Checks if the given source file is a circular import.
    * Checks the ongoing driver runs to determine whether the source file in turn imports the current source file.
@@ -1395,6 +1377,13 @@ public class Driver {
   }
 
   
+  private static Map<RelativePath, Integer> editedSourceStamps(Environment env, Map<RelativePath, String> editedSources) {
+    Map<RelativePath, Integer> stamps = new HashMap<>();
+    for (RelativePath p : editedSources.keySet())
+      stamps.put(p, env.getStamper().stampOf(p));
+    return stamps;
+  }
+
   public synchronized void interrupt() {
     this.interrupt = true;
   }
