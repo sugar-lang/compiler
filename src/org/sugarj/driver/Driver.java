@@ -777,12 +777,16 @@ public class Driver {
    * @throws InvalidParseTableException 
    * @throws ParseException 
    * @throws TokenExpectedException 
+   * @throws ClassNotFoundException 
    */
-  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     boolean isCircularImport = false;
     
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
-      Result res = ModuleSystemCommands.locateResult(modulePath, params.env);
+      Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
+      Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
+      Result res = Result.read(params.env.getStamper(), compileDep, editedDep, editedSourceStamps(params.editedSources));
+      
       Set<RelativePath> importSourceFiles;
       if (res != null && res.getSourceArtifacts().isEmpty())
         importSourceFiles = res.getSourceArtifacts();
@@ -796,7 +800,7 @@ public class Driver {
       boolean sourceFileAvailable = !importSourceFiles.isEmpty();
       boolean requiresUpdate = res == null ||
 //                               !Collections.disjoint(pendingInputFiles, res.getSourceArtifacts()) ||
-                               !res.isConsistent() || 
+                               !res.isConsistent(editedSourceStamps(params.editedSources)) || 
                                params.env.doGenerateFiles() && res.isParseResult();
       
       if (sourceFileAvailable && requiresUpdate && getCircularImportResult(importSourceFiles) != null) {
@@ -846,6 +850,13 @@ public class Driver {
     return isCircularImport;
   }
   
+  private Map<RelativePath, Integer> editedSourceStamps(Map<RelativePath, String> editedSources) {
+    Map<RelativePath, Integer> stamps = new HashMap<>();
+    for (RelativePath p : editedSources.keySet())
+      stamps.put(p, params.env.getStamper().stampOf(p));
+    return stamps;
+  }
+
   /**
    * Checks if the given source file is a circular import.
    * Checks the ongoing driver runs to determine whether the source file in turn imports the current source file.
@@ -872,10 +883,10 @@ public class Driver {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.currentlyProcessing, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.currentlyProcessing, params.monitor));
       }
       else
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.currentlyProcessing, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.currentlyProcessing, params.monitor));
       if (result.isParseResult())
         params.env.addToIncludePath(result.getParseResultPath());
       return result;

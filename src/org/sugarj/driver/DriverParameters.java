@@ -57,42 +57,30 @@ public class DriverParameters {
    */
   public final IProgressMonitor monitor;
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor) throws IOException {
-    return create(env, baseLang, sourceFile, new LinkedList<Driver>(), monitor);
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, IProgressMonitor monitor) throws IOException {
+    return create(env, baseLang, sourceFile, editedSources, new LinkedList<Driver>(), monitor);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, List<Driver> currentlyProcessing, IProgressMonitor monitor) throws IOException {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, List<Driver> currentlyProcessing, IProgressMonitor monitor) throws IOException {
+    String source = editedSources.get(sourceFile);
+    if (source == null)
+      source = FileCommands.readFileAsString(sourceFile);
     return new DriverParameters(
         env,
         baseLang,
         Collections.singleton(sourceFile),
-        Collections.<RelativePath, String>emptyMap(),
-        new SourceToplevelDeclarationProvider(FileCommands.readFileAsString(sourceFile), sourceFile),
-        currentlyProcessing,
-        monitor);
-  }
-  
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String source, IProgressMonitor monitor) {
-    return create(env, baseLang, sourceFile, source, new LinkedList<Driver>(), monitor);
-  }
-  
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String source, List<Driver> currentlyProcessing, IProgressMonitor monitor) {
-    return new DriverParameters(
-        env,
-        baseLang,
-        Collections.singleton(sourceFile),
-        Collections.singletonMap(sourceFile, source),
+        editedSources,
         new SourceToplevelDeclarationProvider(source, sourceFile),
         currentlyProcessing,
         monitor);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, List<Driver> currentlyProcessing, IProgressMonitor monitor) {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, List<Driver> currentlyProcessing, IProgressMonitor monitor) {
     return new DriverParameters(
         env,
         baseLang,
         Collections.singleton(sourceFile),
-        Collections.<RelativePath, String>emptyMap(),
+        editedSources,
         new TermToplevelDeclarationProvider(termSource, sourceFile, env),
         currentlyProcessing,
         monitor);

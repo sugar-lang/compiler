@@ -251,8 +251,12 @@ public class Result extends CompilationUnit {
     return read(Result.class, stamper, p);
   }
   
-  public static Result create(Stamper stamper, Path compileDep, Path parseDep, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
-    return create(Result.class, stamper, compileDep, parseDep, sourceFiles, editedSourceFiles);
+  public static Result read(Stamper stamper, Path compileDep, Path editedDep, Map<RelativePath, Integer> editedSourceFiles) throws IOException, ClassNotFoundException {
+    return read(Result.class, stamper, compileDep, editedDep, editedSourceFiles);
+  }
+
+  public static Result create(Stamper stamper, Path compileDep, Path editedDep, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+    return create(Result.class, stamper, compileDep, editedDep, sourceFiles, editedSourceFiles);
   }
 
   

@@ -45,7 +45,7 @@ public class ImportCommands {
    * @param asModel If true, looks for models. If false, looks for transformations.
    * @return
    */
-  private RelativePath resolveModule(IStrategoTerm term, IStrategoTerm toplevelDecl, boolean asModel) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+  private RelativePath resolveModule(IStrategoTerm term, IStrategoTerm toplevelDecl, boolean asModel) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     if (ATermCommands.isApplication(term, "TransApp")) {
       IStrategoTerm model = ATermCommands.getApplicationSubterm(term, "TransApp", 1);
       IStrategoTerm transformation = ATermCommands.getApplicationSubterm(term, "TransApp", 0);
@@ -87,7 +87,7 @@ public class ImportCommands {
    * @param driver
    * @return a pair consisting of the path to the transformed model and a flag indicating a circular import (if true). 
    */
-  public Pair<String, Boolean> transformModel(IStrategoTerm model, IStrategoTerm transformation, IStrategoTerm toplevelDecl) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+  public Pair<String, Boolean> transformModel(IStrategoTerm model, IStrategoTerm transformation, IStrategoTerm toplevelDecl) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     RelativePath modelPath = resolveModule(model, toplevelDecl, true);
     RelativePath transformationPath = resolveModule(transformation, toplevelDecl, false);
     
