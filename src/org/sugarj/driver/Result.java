@@ -40,6 +40,11 @@ public class Result extends CompilationUnit {
   private boolean failed;
   
   /**
+   * Transitive closure (over module dependencies) of required and generated files.
+   */
+  transient private Map<Path, Integer> transitivelyAffectedFiles;
+
+  /**
    * maps from source artifacts to generated source files 
    */
   private Map<Set<? extends Path>, Set<? extends Path>> deferredSourceFiles;
@@ -57,8 +62,53 @@ public class Result extends CompilationUnit {
     parseTableFile = null;
     desugaringsFile = null;
     failed = false;
+    transitivelyAffectedFiles = new HashMap<>();
     deferredSourceFiles = new HashMap<>();
   }
+  
+  public void addExternalFileDependency(RelativePath file, int stampOfFile) {
+    super.addExternalFileDependency(file, stampOfFile);
+    transitivelyAffectedFiles.put(file, stampOfFile);
+  }
+  
+  public void addGeneratedFile(Path file, int stampOfFile) {
+    super.addGeneratedFile(file, stampOfFile);
+    transitivelyAffectedFiles.put(file, stampOfFile);
+  }
+  
+  public void addModuleDependency(Result mod) throws IOException {
+    super.addModuleDependency(mod);
+    transitivelyAffectedFiles.putAll(mod.getTransitivelyAffectedFileStamps());
+  }
+
+  private Map<Path, Integer> getTransitivelyAffectedFileStamps() {
+    if (transitivelyAffectedFiles == null) {
+      final Map<Path, Integer> deps = new HashMap<>();
+      
+      ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
+        @Override public Void visit(CompilationUnit mod) {
+          deps.putAll(((Result) mod).generatedFiles); 
+          deps.putAll(((Result) mod).externalFileDependencies);
+          return null;
+        }
+        @Override public Void combine(Void v1, Void v2) { return null; }
+        @Override public Void init() { return null; }
+        @Override public boolean cancel(Void t) { return false; }
+      };
+      
+      visit(collectAffectedFileStampsVisitor);
+      
+      synchronized(this) { transitivelyAffectedFiles = deps; }
+    }
+
+    return transitivelyAffectedFiles;
+  }
+
+  public Set<Path> getTransitivelyAffectedFiles() {
+    return getTransitivelyAffectedFileStamps().keySet();
+  }
+  
+
   
   public void generateFile(Path file, String content) throws IOException {
     FileCommands.writeToFile(file, content);
@@ -189,7 +239,7 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  @SuppressWarnings("unchecked")
+//  @SuppressWarnings("unchecked")
   public void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     super.readEntity(ois);
     
