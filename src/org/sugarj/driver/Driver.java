@@ -228,6 +228,7 @@ public class Driver {
   }
   
   private void initDriver(DriverParameters params) throws FileNotFoundException, IOException, InvalidParseTableException {
+    this.params = params;
     this.baseLanguage = params.baseLang;
     this.baseProcessor = baseLanguage.createNewProcessor();
     
