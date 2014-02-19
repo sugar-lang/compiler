@@ -22,6 +22,7 @@ import org.sugarj.driver.Driver;
 import org.sugarj.driver.ImportCommands;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Result;
+import org.sugarj.util.Pair;
 import org.sugarj.util.Renaming;
 
 /**
@@ -74,12 +75,12 @@ class CompileTransformed extends AbstractPrimitive {
         if (res != null) {
           context.setCurrent(ATermCommands.atermFromFile(source.getAbsolutePath()));
           
-          Result modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment);
-          if (modelResult != null)
-            res.addModuleDependency(modelResult);
-          Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment);
-          if (transformationResult != null)
-            res.addModuleDependency(transformationResult);
+          Pair<Result, Boolean> modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment);
+          if (modelResult.a != null)
+            res.addModuleDependency(modelResult.a);
+          Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment);
+          if (transformationResult.a != null)
+            res.addModuleDependency(transformationResult.a);
         }
       } catch (Exception e) {
         e.printStackTrace();
@@ -126,17 +127,17 @@ class CompileTransformed extends AbstractPrimitive {
     Log.log.beginTask("Check communication integrity", Log.CORE);
     try {
       Collection<Path> modelDeps = new HashSet<Path>();
-      Result modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment);
-      if (modelResult != null) {
-        modelDeps.addAll(modelResult.getCircularFileDependencies());
-        modelDeps.addAll(modelResult.getGeneratedFiles()); 
+      Pair<Result, Boolean> modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment);
+      if (modelResult.a != null) {
+        modelDeps.addAll(modelResult.a.getCircularFileDependencies());
+        modelDeps.addAll(modelResult.a.getGeneratedFiles()); 
       }
   
       Collection<Path> transDeps = new HashSet<Path>();
-      Result transResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment);
-      if (transResult != null) {
-        transDeps.addAll(transResult.getCircularFileDependencies());
-        transDeps.addAll(transResult.getGeneratedFiles()); 
+      Pair<Result, Boolean> transResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment);
+      if (transResult.a != null) {
+        transDeps.addAll(transResult.a.getCircularFileDependencies());
+        transDeps.addAll(transResult.a.getGeneratedFiles()); 
       }
   
       if (res.getPersistentPath() == null)

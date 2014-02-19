@@ -20,6 +20,7 @@ import org.sugarj.common.cleardep.CompilationUnit;
 import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.util.Pair;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
@@ -27,12 +28,7 @@ import org.sugarj.common.path.RelativePath;
 public class Result extends CompilationUnit {
 
   private static final long serialVersionUID = 2546270233774434268L;
-
-  /**
-   *  This is a parse result if it was produced during parsing.
-   */
-  private Path parseResultPath;
-
+  
   private List<IStrategoTerm> editorServices;
   private List<String> collectedErrors;
   private Set<BadTokenException> parseErrors;
@@ -130,7 +126,13 @@ public class Result extends CompilationUnit {
   
   @Override
   protected boolean isConsistentExtend() {
-    return desugaringsFile == null || FileCommands.exists(desugaringsFile);
+    if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
+      return false;
+    
+    if (!failed && sugaredSyntaxTree == null)
+      return false;
+    
+    return true;
   }
   
   public void logError(String error) {
@@ -224,14 +226,6 @@ public class Result extends CompilationUnit {
   }
 
 
-  public boolean isParseResult() {
-    return parseResultPath != null;
-  }
-  
-  public Path getParseResultPath() {
-    return parseResultPath;
-  }
-  
   @Override
   protected void writeEntity(ObjectOutputStream oos) throws IOException {
     super.writeEntity(oos);
@@ -245,7 +239,6 @@ public class Result extends CompilationUnit {
 //  @SuppressWarnings("unchecked")
   protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     super.readEntity(ois);
-    
 //    parseResultPath = (Path) ois.readObject();
 //    deferredSourceFiles =   (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
   }
@@ -279,7 +272,7 @@ public class Result extends CompilationUnit {
     return read(Result.class, stamper, p);
   }
   
-  public static Result read(Stamper stamper, Path compileDep, Path editedDep, boolean doCompile, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+  public static Pair<Result, Boolean> read(Stamper stamper, Path compileDep, Path editedDep, boolean doCompile, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
     return read(Result.class, stamper, compileDep, editedDep, doCompile, editedSourceFiles);
   }
 

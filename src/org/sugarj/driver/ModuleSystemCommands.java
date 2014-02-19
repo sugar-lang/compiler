@@ -19,6 +19,7 @@ import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.util.Pair;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
@@ -225,11 +226,11 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateResult(String modulePath, Environment env) throws IOException {
+  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env) throws IOException {
     return locateResult(modulePath, env, Collections.<RelativePath, Integer>emptyMap());
   }
   
-  public static Result locateResult(String modulePath, Environment env, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), modulePath + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), modulePath + ".dep");
     

@@ -1,7 +1,6 @@
 package org.sugarj.driver.cli;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -53,7 +52,7 @@ public class Main {
         if (null == lang)
           throw new RuntimeException("Unknown file extension \"" + FileCommands.getExtension(sourceFile) + "\".");
         
-        Result res = Driver.run(DriverParameters.create(environment, lang, sourceFile, Collections.<RelativePath, String>emptyMap(), monitor));
+        Result res = Driver.run(DriverParameters.create(environment, lang, sourceFile, monitor));
     
         if (!DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath()))
           throw new RuntimeException("compilation of " + sourceFile + " failed");

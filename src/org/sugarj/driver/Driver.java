@@ -287,7 +287,7 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.env.doGenerateFiles(), params.sourceFiles, editedSourceStamps(params.env, params.editedSources));
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.env.doGenerateFiles(), params.sourceFiles, params.editedSourceStamps);
     
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
@@ -774,11 +774,11 @@ public class Driver {
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
       Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-      Result res = Result.read(params.env.getStamper(), compileDep, editedDep, params.env.doGenerateFiles(), editedSourceStamps(params.env, params.editedSources));
+      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.env.doGenerateFiles(), params.editedSourceStamps);
       
       Set<RelativePath> importSourceFiles;
-      if (res != null && !res.getSourceArtifacts().isEmpty())
-        importSourceFiles = res.getSourceArtifacts();
+      if (res.a != null && !res.a.getSourceArtifacts().isEmpty())
+        importSourceFiles = res.a.getSourceArtifacts();
       else {
         importSourceFiles = new HashSet<>();
         RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, params.env.getSourcePath(), baseProcessor, params.env);
@@ -788,9 +788,8 @@ public class Driver {
 
       boolean sourceFileAvailable = !importSourceFiles.isEmpty();
       boolean requiresUpdate = res == null ||
-//                               !Collections.disjoint(pendingInputFiles, res.getSourceArtifacts()) ||
-                               !res.isConsistent(editedSourceStamps(params.env, params.editedSources)) || 
-                               params.env.doGenerateFiles() && res.isParseResult();
+                               !res.b || 
+                               params.env.doGenerateFiles() && res.a.isParsedCompilationUnit();
       
       if (getCircularImportResult(importSourceFiles) != null) {
         // Circular import. Assume source file does not provide syntactic sugar.
@@ -805,8 +804,8 @@ public class Driver {
         
         // FIXME
         assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
-        res = subcompile(toplevelDecl, importSourceFiles.iterator().next());
-        if (res == null || res.hasFailed())
+        res.a = subcompile(toplevelDecl, importSourceFiles.iterator().next());
+        if (res.a == null || res.a.hasFailed())
           setErrorMessage("Problems while compiling " + modulePath);
           
         log.log("CONTINUE PROCESSING'" + params.sourceFiles + "'.", Log.CORE);
@@ -817,9 +816,9 @@ public class Driver {
       }
       
       if (!isCircularImport && res != null) {
-        if (res.hasPersistentVersionChanged())
+        if (res.a.hasPersistentVersionChanged())
           setErrorMessage("Result is inconsitent with persistent version.");
-        driverResult.addModuleDependency(res);
+        driverResult.addModuleDependency(res.a);
       }
       
       if (!isCircularImport && !importSourceFiles.isEmpty())
@@ -865,12 +864,10 @@ public class Driver {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.currentlyProcessing, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.monitor));
       }
       else
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.currentlyProcessing, params.monitor));
-      if (result.isParseResult())
-        params.env.addToIncludePath(result.getParseResultPath());
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.monitor));
       return result;
     } catch (IOException e) {
       setErrorMessage("Problems while compiling " + importSourceFile);
@@ -1377,13 +1374,6 @@ public class Driver {
   }
 
   
-  private static Map<RelativePath, Integer> editedSourceStamps(Environment env, Map<RelativePath, String> editedSources) {
-    Map<RelativePath, Integer> stamps = new HashMap<>();
-    for (RelativePath p : editedSources.keySet())
-      stamps.put(p, env.getStamper().stampOf(p));
-    return stamps;
-  }
-
   public synchronized void interrupt() {
     this.interrupt = true;
   }
