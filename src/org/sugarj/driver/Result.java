@@ -25,6 +25,8 @@ import org.sugarj.common.path.RelativePath;
  */
 public class Result extends CompilationUnit {
 
+  private static final long serialVersionUID = 2546270233774434268L;
+
   /**
    *  This is a parse result if it was produced during parsing.
    */
@@ -230,7 +232,7 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  public void writeEntity(ObjectOutputStream oos) throws IOException {
+  protected void writeEntity(ObjectOutputStream oos) throws IOException {
     super.writeEntity(oos);
     
 //    oos.writeObject(parseResultPath);
@@ -240,7 +242,7 @@ public class Result extends CompilationUnit {
   
   @Override
 //  @SuppressWarnings("unchecked")
-  public void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+  protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     super.readEntity(ois);
     
 //    parseResultPath = (Path) ois.readObject();
@@ -251,12 +253,12 @@ public class Result extends CompilationUnit {
     return read(Result.class, stamper, p);
   }
   
-  public static Result read(Stamper stamper, Path compileDep, Path editedDep, Map<RelativePath, Integer> editedSourceFiles) throws IOException, ClassNotFoundException {
-    return read(Result.class, stamper, compileDep, editedDep, editedSourceFiles);
+  public static Result read(Stamper stamper, Path compileDep, Path editedDep, boolean doCompile, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+    return read(Result.class, stamper, compileDep, editedDep, doCompile, editedSourceFiles);
   }
 
-  public static Result create(Stamper stamper, Path compileDep, Path editedDep, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
-    return create(Result.class, stamper, compileDep, editedDep, sourceFiles, editedSourceFiles);
+  public static Result create(Stamper stamper, Path compileDep, Path editedDep, boolean doCompile, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+    return create(Result.class, stamper, compileDep, editedDep, doCompile, sourceFiles, editedSourceFiles);
   }
 
   

@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
 import org.sugarj.common.ATermCommands;
@@ -223,20 +225,14 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateResult(String modulePath, Environment environment) {
-    Path dep = ModuleSystemCommands.searchFile(modulePath, "dep", environment, null);
-    Result res = null;
+  public static Result locateResult(String modulePath, Environment env) throws IOException {
+    return locateResult(modulePath, env, Collections.<RelativePath, Integer>emptyMap());
+  }
+  
+  public static Result locateResult(String modulePath, Environment env, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+    RelativePath compileDep = new RelativePath(env.getCompileBin(), modulePath + ".dep");
+    RelativePath editedDep = new RelativePath(env.getParseBin(), modulePath + ".dep");
     
-    if (dep != null)
-      try {
-        res = Result.read(environment.getStamper(), dep);
-      } catch (IOException e) {
-        log.logErr("could not read dependency file " + dep, Log.DETAIL);
-      } catch (ClassNotFoundException e) {
-        e.printStackTrace();
-        log.logErr("could not read dependency file " + dep, Log.DETAIL);
-      }
-    
-    return res;
+    return Result.read(env.getStamper(), compileDep, editedDep, env.doGenerateFiles(), editedSourceFiles);
   }
 }
