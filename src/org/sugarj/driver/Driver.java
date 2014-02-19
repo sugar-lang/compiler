@@ -287,7 +287,7 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, parseDep, params.env.doGenerateFiles(), params.sourceFiles, editedSourceStamps(params.env, params.editedSources));
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.env.doGenerateFiles(), params.sourceFiles, editedSourceStamps(params.env, params.editedSources));
     
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
