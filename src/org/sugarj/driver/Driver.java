@@ -395,7 +395,14 @@ public class Driver {
       params.currentlyProcessing.remove(this);
       params.env.setRenamings(originalRenamings);
 
-      driverResult.setFailed(!success);
+      if (interrupt) {
+        driverResult.setFailed(false);
+        driverResult.setSugaredSyntaxTree(null);
+      }
+      else {
+        driverResult.setFailed(!success);
+      }
+      
       driverResult.write();
     }
   }
