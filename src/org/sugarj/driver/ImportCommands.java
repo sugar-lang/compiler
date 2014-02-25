@@ -14,6 +14,7 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
+import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -120,7 +121,7 @@ public class ImportCommands {
       String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
       Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath, environment);
   
-      if (transformedModelResult.a != null && transformedModelResult.a.isConsistent()) {
+      if (transformedModelResult.a != null && transformedModelResult.a.isConsistent(new Mode(environment.doGenerateFiles(), environment.forEditor()))) {
         // result of transformation is already up-to-date, nothing to do here.
         driverResult.addModuleDependency(transformedModelResult.a);
         return Pair.create(transformedModelPath, false);

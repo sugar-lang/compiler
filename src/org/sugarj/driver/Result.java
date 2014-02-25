@@ -17,6 +17,7 @@ import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.cleardep.CompilationUnit;
+import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
@@ -125,8 +126,11 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  protected boolean isConsistentExtend() {
+  protected boolean isConsistentExtend(Mode mode) {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
+      return false;
+    
+    if (mode.forEditor && !hasFailed() && getSugaredSyntaxTree() == null)
       return false;
     
     return true;
@@ -286,11 +290,11 @@ public class Result extends CompilationUnit {
     return read(Result.class, stamper, p);
   }
   
-  public static Pair<Result, Boolean> read(Stamper stamper, Path compileDep, Path editedDep, boolean doCompile, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
-    return read(Result.class, stamper, compileDep, editedDep, doCompile, editedSourceFiles);
+  public static Pair<Result, Boolean> read(Stamper stamper, Path compileDep, Path editedDep, Mode mode) throws IOException {
+    return read(Result.class, stamper, compileDep, editedDep, mode);
   }
 
-  public static Result create(Stamper stamper, Path compileDep, Path compileTarget, Path editedDep, Path editedTarget, boolean doCompile, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
-    return create(Result.class, stamper, compileDep, compileTarget, editedDep, editedTarget, doCompile, sourceFiles, editedSourceFiles);
+  public static Result create(Stamper stamper, Path compileDep, Path compileTarget, Path editedDep, Path editedTarget, Set<RelativePath> sourceFiles, Mode mode) throws IOException {
+    return create(Result.class, stamper, compileDep, compileTarget, editedDep, editedTarget, sourceFiles, mode);
   }
 }

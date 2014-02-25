@@ -51,6 +51,7 @@ import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
+import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
@@ -287,7 +288,9 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.env.doGenerateFiles(), params.sourceFiles, params.editedSourceStamps);
+    Mode mode = new Mode(params.env.doGenerateFiles(), params.env.forEditor(), params.editedSourceStamps);
+    
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, mode);
     
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
@@ -782,7 +785,7 @@ public class Driver {
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
       Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.env.doGenerateFiles(), params.editedSourceStamps);
+      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, new Mode(params.env.doGenerateFiles(), false, params.editedSourceStamps));
       
       Set<RelativePath> importSourceFiles;
       if (res.a != null && !res.a.getSourceArtifacts().isEmpty())

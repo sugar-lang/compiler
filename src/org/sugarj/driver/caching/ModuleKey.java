@@ -51,11 +51,7 @@ public class ModuleKey implements Externalizable {
     
     for (Path p : dependentFiles)
       if ((pat == null || pat.matcher(p.getAbsolutePath()).matches()) && FileCommands.exists(p)) {
-        String cachePath;
-        if (p instanceof RelativePath)
-          cachePath = ((RelativePath) p).getRelativePath();
-        else
-          cachePath = p.getAbsolutePath();
+        String cachePath = p.getAbsolutePath();
         moduleDeps.put(cachePath, stamper.stampOf(p));
       }
   }
