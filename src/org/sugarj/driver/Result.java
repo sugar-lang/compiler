@@ -27,7 +27,7 @@ import org.sugarj.util.Pair;
  */
 public class Result extends CompilationUnit {
 
-  private static final long serialVersionUID = 2546270233774434268L;
+  public static final long serialVersionUID = 2546270233774434268L;
   
   private List<IStrategoTerm> editorServices;
   private List<String> collectedErrors;
@@ -108,9 +108,9 @@ public class Result extends CompilationUnit {
   }
   
 
-  
   public void generateFile(Path file, String content) throws IOException {
-    FileCommands.writeToFile(file, content);
+    if (!FileCommands.exists(file) || !content.equals(FileCommands.readFileAsString(file)))
+      FileCommands.writeToFile(file, content);
     addGeneratedFile(file);
   }
 
@@ -127,9 +127,6 @@ public class Result extends CompilationUnit {
   @Override
   protected boolean isConsistentExtend() {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
-      return false;
-    
-    if (!failed && sugaredSyntaxTree == null)
       return false;
     
     return true;
@@ -229,18 +226,35 @@ public class Result extends CompilationUnit {
   @Override
   protected void writeEntity(ObjectOutputStream oos) throws IOException {
     super.writeEntity(oos);
-    
-//    oos.writeObject(parseResultPath);
-    
-//    oos.writeObject(deferredSourceFiles = Collections.unmodifiableMap(deferredSourceFiles));
+//    oos.writeObject(editorServices = Collections.unmodifiableList(editorServices));
+//    oos.writeObject(collectedErrors = Collections.unmodifiableList(collectedErrors));
+//    oos.writeObject(parseErrors = Collections.unmodifiableSet(parseErrors));
+//    oos.writeObject(sugaredSyntaxTree);
+//    oos.writeObject(AnalysisDataAttachment.getAnalysisData(sugaredSyntaxTree));
+//    oos.writeObject(desugaredSyntaxTree);
+//    oos.writeObject(parseTableFile);
+//    oos.writeObject(desugaringsFile);
+//    oos.writeBoolean(failed);
+//    oos.writeObject(deferredSourceFiles);
+//    transitivelyAffectedFiles = null;
   }
   
   @Override
-//  @SuppressWarnings("unchecked")
   protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     super.readEntity(ois);
-//    parseResultPath = (Path) ois.readObject();
-//    deferredSourceFiles =   (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
+    transitivelyAffectedFiles = null;
+//    editorServices = (List<IStrategoTerm>) ois.readObject();
+//    collectedErrors = (List<String>) ois.readObject();
+//    parseErrors = (Set<BadTokenException>) ois.readObject();
+//    sugaredSyntaxTree = (IStrategoTerm) ois.readObject();
+//    Map<TermKey, Map<String, IStrategoTerm>> map = (Map<TermKey, Map<String, IStrategoTerm>>) ois.readObject();
+//    if (map != null)
+//      sugaredSyntaxTree.putAttachment(new AnalysisDataAttachment(map));
+//    desugaredSyntaxTree = (IStrategoTerm) ois.readObject();
+//    parseTableFile = (Path) ois.readObject();
+//    desugaringsFile = (Path) ois.readObject();
+//    failed = ois.readBoolean();
+//    deferredSourceFiles = (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
   }
 
   @Override

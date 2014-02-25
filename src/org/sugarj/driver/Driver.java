@@ -395,6 +395,9 @@ public class Driver {
       params.currentlyProcessing.remove(this);
       params.env.setRenamings(originalRenamings);
 
+      if (!interrupt)
+        driverResult.write();
+      
       if (interrupt) {
         driverResult.setFailed(false);
         driverResult.setSugaredSyntaxTree(null);
@@ -402,8 +405,6 @@ public class Driver {
       else {
         driverResult.setFailed(!success);
       }
-      
-      driverResult.write();
     }
   }
 
