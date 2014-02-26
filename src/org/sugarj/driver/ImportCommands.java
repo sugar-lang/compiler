@@ -14,7 +14,8 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.Mode;
+import org.sugarj.common.cleardep.mode.DoCompileMode;
+import org.sugarj.common.cleardep.mode.ForEditorMode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -27,13 +28,15 @@ public class ImportCommands {
   private AbstractBaseProcessor baseProcessor;
   private Environment environment;
   private Driver driver;
+  private DriverParameters params;
   private Result driverResult;
   private STRCommands str; 
   
-  public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, Result driverResult, STRCommands str) {
+  public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, DriverParameters params, Result driverResult, STRCommands str) {
     this.baseProcessor = baseProcessor;
     this.environment = environment;
     this.driver = driver;
+    this.params = params;
     this.driverResult = driverResult;
     this.str = str;
   }
@@ -121,7 +124,7 @@ public class ImportCommands {
       String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
       Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath, environment);
   
-      if (transformedModelResult.a != null && transformedModelResult.a.isConsistent(new Mode(environment.doGenerateFiles(), environment.forEditor()))) {
+      if (transformedModelResult.a != null && transformedModelResult.a.isConsistent(params.editedSourceStamps, new ForEditorMode(new DoCompileMode(null, environment.doGenerateFiles()), environment.forEditor()))) {
         // result of transformation is already up-to-date, nothing to do here.
         driverResult.addModuleDependency(transformedModelResult.a);
         return Pair.create(transformedModelPath, false);

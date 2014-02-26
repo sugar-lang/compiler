@@ -44,14 +44,19 @@ public class ModuleKey implements Externalizable {
     this.body = body;
   }
   
-  public ModuleKey(Stamper stamper, Set<Path> dependentFiles, Pattern pat, IStrategoTerm module) throws IOException {
+  public ModuleKey(Stamper stamper, Set<Path> dependentFiles, Path projectBasePath, Pattern pat, IStrategoTerm module) throws IOException {
     this.moduleDeps = new HashMap<>();
     
     this.body = ATermCommands.atermToString(module);
     
     for (Path p : dependentFiles)
       if ((pat == null || pat.matcher(p.getAbsolutePath()).matches()) && FileCommands.exists(p)) {
-        String cachePath = p.getAbsolutePath();
+        RelativePath relPath = FileCommands.getRelativePath(projectBasePath, p);
+        String cachePath;
+        if (relPath == null)
+          cachePath = p.getAbsolutePath();
+        else
+          cachePath = relPath.getRelativePath();
         moduleDeps.put(cachePath, stamper.stampOf(p));
       }
   }

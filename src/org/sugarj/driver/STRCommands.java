@@ -226,7 +226,7 @@ public class STRCommands {
 
       aterm = ATermCommands.getApplicationSubterm(aterm, "Module", 1);
 
-      return new ModuleKey(environment.getStamper(), dependentFiles, STR_FILE_PATTERN, aterm);
+      return new ModuleKey(environment.getStamper(), dependentFiles, environment.getRoot(), STR_FILE_PATTERN, aterm);
     } catch (Exception e) {
       throw new SGLRException(strParser, "could not parse STR file " + str, e);
     } finally {

@@ -17,7 +17,8 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.Mode;
+import org.sugarj.common.cleardep.mode.DoCompileMode;
+import org.sugarj.common.cleardep.mode.ForEditorMode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -235,6 +236,6 @@ public class ModuleSystemCommands {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), modulePath + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), modulePath + ".dep");
     
-    return Result.read(env.getStamper(), compileDep, editedDep, new Mode(env.doGenerateFiles(), env.forEditor(), editedSourceFiles));
+    return Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, new ForEditorMode(new DoCompileMode(null, env.doGenerateFiles()), env.forEditor()));
   }
 }

@@ -51,7 +51,9 @@ import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
-import org.sugarj.common.cleardep.Mode;
+import org.sugarj.common.cleardep.mode.DoCompileMode;
+import org.sugarj.common.cleardep.mode.ForEditorMode;
+import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
@@ -288,9 +290,9 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    Mode mode = new Mode(params.env.doGenerateFiles(), params.env.forEditor(), params.editedSourceStamps);
+    Mode mode = new ForEditorMode(new DoCompileMode(null, params.env.doGenerateFiles()), params.env.forEditor());
     
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, mode);
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, mode);
     
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
@@ -721,7 +723,7 @@ public class Driver {
         IStrategoTerm model = getApplicationSubterm(appl, "TransApp", 1);
         IStrategoTerm transformation = getApplicationSubterm(appl, "TransApp", 0);
         
-        ImportCommands imp = new ImportCommands(baseProcessor, params.env, this, driverResult, str);
+        ImportCommands imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
         Pair<String, Boolean> transformationResult = imp.transformModel(model, transformation, toplevelDecl);
 
         if (transformationResult == null)
@@ -785,7 +787,7 @@ public class Driver {
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
       Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, new Mode(params.env.doGenerateFiles(), false, params.editedSourceStamps));
+      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, new DoCompileMode(null, params.env.doGenerateFiles()));
       
       Set<RelativePath> importSourceFiles;
       if (res.a != null && !res.a.getSourceArtifacts().isEmpty())
@@ -826,7 +828,7 @@ public class Driver {
         driverResult.addCircularModuleDependency(getCircularImportResult(importSourceFiles));
       }
       
-      if (!isCircularImport && res != null) {
+      if (!isCircularImport && res.a != null) {
         if (res.a.hasPersistentVersionChanged())
           setErrorMessage("Result is inconsitent with persistent version.");
         driverResult.addModuleDependency(res.a);

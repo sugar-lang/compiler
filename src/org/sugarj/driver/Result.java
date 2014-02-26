@@ -17,8 +17,9 @@ import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.cleardep.CompilationUnit;
-import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.cleardep.Stamper;
+import org.sugarj.common.cleardep.mode.ForEditorMode;
+import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -86,7 +87,7 @@ public class Result extends CompilationUnit {
       final Map<Path, Integer> deps = new HashMap<>();
       
       ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
-        @Override public Void visit(CompilationUnit mod) {
+        @Override public Void visit(CompilationUnit mod, Mode mode) {
           deps.putAll(((Result) mod).generatedFiles); 
           deps.putAll(((Result) mod).externalFileDependencies);
           return null;
@@ -130,7 +131,7 @@ public class Result extends CompilationUnit {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
       return false;
     
-    if (mode.forEditor && !hasFailed() && getSugaredSyntaxTree() == null)
+    if (ForEditorMode.isForEditor(mode) && !hasFailed() && getSugaredSyntaxTree() == null)
       return false;
     
     return true;
@@ -290,11 +291,11 @@ public class Result extends CompilationUnit {
     return read(Result.class, stamper, p);
   }
   
-  public static Pair<Result, Boolean> read(Stamper stamper, Path compileDep, Path editedDep, Mode mode) throws IOException {
-    return read(Result.class, stamper, compileDep, editedDep, mode);
+  public static Pair<Result, Boolean> read(Stamper stamper, Path compileDep, Path editedDep, Map<RelativePath, Integer> editedSourceFiles, Mode mode) throws IOException {
+    return read(Result.class, stamper, compileDep, editedDep, editedSourceFiles, mode);
   }
 
-  public static Result create(Stamper stamper, Path compileDep, Path compileTarget, Path editedDep, Path editedTarget, Set<RelativePath> sourceFiles, Mode mode) throws IOException {
-    return create(Result.class, stamper, compileDep, compileTarget, editedDep, editedTarget, sourceFiles, mode);
+  public static Result create(Stamper stamper, Path compileDep, Path compileTarget, Path editedDep, Path editedTarget, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles, Mode mode) throws IOException {
+    return create(Result.class, stamper, compileDep, compileTarget, editedDep, editedTarget, sourceFiles, editedSourceFiles, mode);
   }
 }

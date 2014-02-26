@@ -280,7 +280,7 @@ public class SDFCommands {
       IStrategoTerm body = ATermCommands.getApplicationSubterm(aterm, "module", 2);
       IStrategoTerm term = ATermCommands.makeTuple(imports, body);
 
-      return new ModuleKey(environment.getStamper(), dependentFiles, SDF_FILE_PATTERN, term);
+      return new ModuleKey(environment.getStamper(), dependentFiles, environment.getRoot(), SDF_FILE_PATTERN, term);
     } catch (Exception e) {
       throw new SGLRException(sdfParser, "could not parse SDF file " + sdf, e);
     } finally {
