@@ -108,7 +108,7 @@ public class DriverCLI {
       log.log("error: line " + error.lineStart + " column " + error.columnStart + " to line " + error.lineEnd + " column " + error.columEnd + ":\n  " + error.msg, Log.ALWAYS);
 
     
-    IStrategoTerm errorTree = STRCommands.assimilate("sugarj-analyze", res.getDesugaringsFile(), tuple, new HybridInterpreter());
+    IStrategoTerm errorTree = STRCommands.execute("sugarj-analyze", res.getDesugaringsFile(), tuple, new HybridInterpreter());
     
     assert errorTree.getTermType() == IStrategoTerm.TUPLE && errorTree.getSubtermCount() == 4 :
       "error in sugarj-analyze, did not return tuple with 4 elements";

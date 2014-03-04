@@ -12,8 +12,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.spoofax.interpreter.core.Interpreter;
 import org.spoofax.interpreter.core.InterpreterException;
 import org.spoofax.interpreter.library.IOAgent;
+import org.spoofax.interpreter.stratego.CallT;
+import org.spoofax.interpreter.stratego.SDefT;
+import org.spoofax.interpreter.stratego.Strategy;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.InvalidParseTableException;
 import org.spoofax.jsglr.client.SGLR;
@@ -235,16 +239,37 @@ public class STRCommands {
     
   }
   
-  public static IStrategoTerm assimilate(Path ctree, IStrategoTerm in, HybridInterpreter interp) throws IOException {
-    return assimilate("internal-main", ctree, in, interp);
+  public static IStrategoTerm execute(String strategyName, Path ctree, IStrategoTerm in, HybridInterpreter interp) throws IOException {
+    return execute(strategyName, new IStrategoTerm[0], ctree, in, interp);
   }
   
-  public static IStrategoTerm assimilate(String strategy, Path ctree, IStrategoTerm in, HybridInterpreter interp) throws IOException {
+  public static IStrategoTerm execute(String strategyName, IStrategoTerm[] targs, Path ctree, IStrategoTerm in, HybridInterpreter interp) throws IOException {
     try {
       interp.load(ctree.getAbsolutePath());
+      interp.init();
+    } catch (InterpreterException e) {
+      throw new StrategoException("desugaring failed: " + (e.getCause() == null ? e : e.getCause()).getMessage(), e);
+    }
+    
+    if (targs.length != 0 && !strategyName.contains("_"))
+      strategyName = Interpreter.cify(strategyName) + "_0_" + targs.length;
+    
+    SDefT def = interp.lookupUncifiedSVar(strategyName);
+    if (def == null)
+      throw new IllegalArgumentException("Could not find strategy " + strategyName);
+
+    Strategy strategy = new CallT(def.getName(), new Strategy[]{}, targs);
+    return execute(strategy, ctree, in, interp);
+  }
+  
+  public static IStrategoTerm execute(Strategy strategy, Path ctree, IStrategoTerm in, HybridInterpreter interp) throws IOException {
+    try {
+      interp.load(ctree.getAbsolutePath());
+      interp.init();
+      
       interp.setCurrent(in);
       
-      if (interp.invoke(strategy)) {
+      if (strategy.evaluate(interp.getContext())) {
         IStrategoTerm term = interp.current();
 
         //XXX performance improvement?

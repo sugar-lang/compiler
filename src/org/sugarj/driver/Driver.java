@@ -50,10 +50,8 @@ import org.sugarj.common.CommandExecution;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
+import org.sugarj.common.Renaming.FromTo;
 import org.sugarj.common.StringCommands;
-import org.sugarj.common.cleardep.mode.DoCompileMode;
-import org.sugarj.common.cleardep.mode.ForEditorMode;
-import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
@@ -66,7 +64,6 @@ import org.sugarj.stdlib.StdLib;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
 import org.sugarj.util.Pair;
 import org.sugarj.util.ProcessingListener;
-import org.sugarj.util.Renaming;
 
 
 /**
@@ -307,7 +304,7 @@ public class Driver {
    * @throws InterruptedException 
    */
   private void process() throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
-    List<Renaming> originalRenamings = new LinkedList<Renaming>(params.env.getRenamings());
+    List<FromTo> originalRenamings = new LinkedList<FromTo>(params.env.getRenamings());
     params.currentlyProcessing.add(this);
     
     log.beginTask("processing", "Process " + params.sourceFiles, Log.CORE);
@@ -612,7 +609,7 @@ public class Driver {
     try {
       currentTransProg = str.compile(currentTransSTR, "main", driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
     
-      return STRCommands.assimilate("analyze-main", currentTransProg, term, baseProcessor.getInterpreter());
+      return STRCommands.execute("analyze-main", currentTransProg, term, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
       String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
       
@@ -632,7 +629,7 @@ public class Driver {
     try {
       currentTransProg = str.compile(currentTransSTR, "main", driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
 
-      return STRCommands.assimilate(currentTransProg, term, baseProcessor.getInterpreter());
+      return STRCommands.execute("internal-main", currentTransProg, term, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
       String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
       
@@ -652,7 +649,7 @@ public class Driver {
       if (currentTransProg == null)
         return term;
       
-      IStrategoTerm result = STRCommands.assimilate("apply-renamings", currentTransProg, term, baseProcessor.getInterpreter());
+      IStrategoTerm result = STRCommands.execute("apply-renamings", currentTransProg, term, baseProcessor.getInterpreter());
       return result == null ? term : result;
     } catch (StrategoException e) {
       String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
@@ -715,7 +712,7 @@ public class Driver {
         String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
         
         if (localModelName != null)
-          params.env.getRenamings().add(0, new Renaming(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
+          params.env.getRenamings().add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
       } else {
         IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
         IStrategoTerm model = getApplicationSubterm(appl, "TransApp", 1);
@@ -733,9 +730,9 @@ public class Driver {
         String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
         
         if (localModelName != null)
-          params.env.getRenamings().add(0, new Renaming(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
+          params.env.getRenamings().add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
         else
-          params.env.getRenamings().add(0, new Renaming(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
+          params.env.getRenamings().add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
         
         IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(modulePath, toplevelDecl);
         desugaredBodyDecls.remove(toplevelDecl);

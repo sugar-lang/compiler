@@ -2,6 +2,7 @@ package org.sugarj.driver;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.Collections;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.InvalidParseTableException;
@@ -14,6 +15,8 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
+import org.sugarj.common.Renaming;
+import org.sugarj.common.Renaming.FromTo;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -118,23 +121,23 @@ public class ImportCommands {
 
     Log.log.beginTask("Transform model " + FileCommands.fileName(modelPath) + " with transformation " + FileCommands.fileName(transformationPath), Log.TRANSFORM);
     try {
-      RelativePath transformedModelSourceFile = getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
-      String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
-      Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath, environment, environment.getMode().getModeForRequiredModules());
+      RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
+//      String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
+      Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
   
       if (transformedModelResult.a != null && transformedModelResult.b) {
         // result of transformation is already up-to-date, nothing to do here.
         driverResult.addModuleDependency(transformedModelResult.a);
-        return Pair.create(transformedModelPath, false);
+        return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), false);
       }
       else {
         // transform the model, prepare the import of the resulting code.
-        IStrategoTerm transformedModel = executeTransformation(modelPath, transformationPath, toplevelDecl, environment, str, driver);
+        IStrategoTerm transformedModel = executeTransformation(modelPath, transformationPath, toplevelDecl);
         String transformedModelText = ATermCommands.atermToString(transformedModel);
-        driverResult.generateFile(transformedModelSourceFile, transformedModelText);
+        driverResult.generateFile(transformedModelPath, transformedModelText);
         
-        boolean isCircularImport = driver.prepareImport(toplevelDecl, transformedModelPath);
-        return Pair.create(transformedModelPath, isCircularImport);
+        boolean isCircularImport = driver.prepareImport(toplevelDecl, transformedModelPath.getRelativePath());
+        return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
     } finally {
       Log.log.endTask();
@@ -146,11 +149,11 @@ public class ImportCommands {
    * 
    * Assumes that the model and transformation are already registered as dependencies with the current driver result.
    * 
-   * @param model Path to the *.model file that contains the Aterm model.
+   * @param modelPath Path to the *.model file that contains the Aterm model.
    * @param transformationPath Path to the *.str transformation.
    */
-  private IStrategoTerm executeTransformation(RelativePath model, RelativePath transformationPath, IStrategoTerm toplevelDecl, Environment environment, STRCommands str, Driver driver) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
-    IStrategoTerm modelTerm = ATermCommands.atermFromFile(model.getAbsolutePath());
+  private IStrategoTerm executeTransformation(RelativePath modelPath, RelativePath transformationPath, IStrategoTerm toplevelDecl) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
+    IStrategoTerm modelTerm = ATermCommands.atermFromFile(modelPath.getAbsolutePath());
     String strat = "main-" + FileCommands.dropExtension(transformationPath.getRelativePath()).replace('/', '_');
     Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules());
     
@@ -159,40 +162,39 @@ public class ImportCommands {
     
     Path trans = str.compile(transformationPath, strat, transformationResult.a.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
     
-    IStrategoTerm transformationInput = 
-        ATermCommands.makeTuple(
-            modelTerm, 
-            ATermCommands.makeString(FileCommands.dropExtension(model.getRelativePath()), null),
-            ATermCommands.makeString(FileCommands.dropExtension(transformationPath.getRelativePath()), null));
+//    IStrategoTerm transformationInput = 
+//        ATermCommands.makeTuple(
+//            modelTerm, 
+//            ATermCommands.makeString(FileCommands.dropExtension(model.getRelativePath()), null),
+//            ATermCommands.makeString(FileCommands.dropExtension(transformationPath.getRelativePath()), null));
 
     try {
-      IStrategoTerm transformedTerm = STRCommands.assimilate(strat, trans, transformationInput, baseProcessor.getInterpreter());
-      return transformedTerm;
+      IStrategoTerm transformedTerm = STRCommands.execute(strat, trans, modelTerm, baseProcessor.getInterpreter());
+
+      // local renaming of model name according to transformation
+      IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, modelPath, Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment), trans, toplevelDecl);
+
+      return renamedTransformedModel;
     } catch (StrategoException e) {
-      String msg = "Failed to apply transformation " + transformationPath.getRelativePath() + " to model " + model.getRelativePath() + ": " + e.getMessage();
+      String msg = "Failed to apply transformation " + transformationPath.getRelativePath() + " to model " + modelPath.getRelativePath() + ": " + e.getMessage();
       driver.setErrorMessage(toplevelDecl, msg);
       throw new StrategoException(msg);
     }
   }
   
-  /**
-   * Computes the path of the model file generated from the given model path by the given transformation path.
-   * 
-   * @param modelPath
-   * @param transformationPath
-   * @param environment
-   * @return
-   */
-  public static RelativePath getTransformedModelSourceFilePath(RelativePath modelPath, RelativePath transformationPath, Environment environment) {
-    if (modelPath == null)
-      return null;
-    if (transformationPath == null)
-      return environment.createOutPath(modelPath + ".model");
-    
-    String transformationPathString = FileCommands.dropExtension(transformationPath.getRelativePath());
-    String transformedModelPath = FileCommands.dropExtension(modelPath.getRelativePath()) + "__" + transformationPathString.replace('/', '_');
-    return environment.createOutPath(transformedModelPath + ".model");
+  private IStrategoTerm renameModel(IStrategoTerm transformedModel, RelativePath modelPath, RelativePath transformedModelPath, Path compiledTrans, IStrategoTerm toplevelDecl) {
+    FromTo renaming = new FromTo(modelPath, transformedModelPath);
+    IStrategoTerm map = Renaming.makeRenamingHashtable(Collections.singletonList(renaming));
+    IStrategoTerm[] targs = new IStrategoTerm[] {map};
+    try {
+      return STRCommands.execute("apply-renamings", targs, compiledTrans, transformedModel, baseProcessor.getInterpreter());
+    } catch (IOException e) {
+      String msg = "Failed to rename transformedModel " + transformedModelPath + " from " + renaming.from + " to " + renaming.to + ": " + e.getMessage();
+      driver.setErrorMessage(toplevelDecl, msg);
+      throw new StrategoException(msg);
+    }
   }
+
   
   /**
    * Retrieves the right-most model in the given transformation application and returns the model's name.

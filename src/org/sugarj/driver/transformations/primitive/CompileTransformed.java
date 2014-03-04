@@ -15,16 +15,15 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.mode.DoCompileMode;
+import org.sugarj.common.Renaming;
+import org.sugarj.common.Renaming.FromTo;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
-import org.sugarj.driver.ImportCommands;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Result;
 import org.sugarj.util.Pair;
-import org.sugarj.util.Renaming;
 
 /**
  * Primitive for looking up and loading a model according to the current environment.
@@ -57,10 +56,10 @@ class CompileTransformed extends AbstractPrimitive {
       IStrategoTerm transformationsTerm = tvars[1];
       RelativePath transformationPath = new RelativePath(ATermCommands.getString(transformationsTerm)); 
       
-      RelativePath source = ImportCommands.getTransformedModelSourceFilePath(modelRelativePath, transformationPath, environment);
+      RelativePath source = Renaming.getTransformedModelSourceFilePath(modelRelativePath, transformationPath, environment);
       
       try {
-        Renaming ren = new Renaming(modelPath, source.getRelativePath());
+        FromTo ren = new FromTo(modelPath, source.getRelativePath());
         environment.getRenamings().add(0, ren);
 //        generatedModel = driver.currentRename(generatedModel);
         
