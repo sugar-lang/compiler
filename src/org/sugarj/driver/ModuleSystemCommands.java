@@ -17,8 +17,7 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.mode.DoCompileMode;
-import org.sugarj.common.cleardep.mode.ForEditorMode;
+import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -228,14 +227,14 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env) throws IOException {
-    return locateResult(modulePath, env, Collections.<RelativePath, Integer>emptyMap());
+  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Mode mode) throws IOException {
+    return locateResult(modulePath, env, mode, Collections.<RelativePath, Integer>emptyMap());
   }
   
-  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Mode mode, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), modulePath + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), modulePath + ".dep");
     
-    return Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, new ForEditorMode(new DoCompileMode(null, env.doGenerateFiles()), env.forEditor()));
+    return Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
   }
 }

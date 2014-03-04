@@ -290,9 +290,7 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    Mode mode = new ForEditorMode(new DoCompileMode(null, params.env.doGenerateFiles()), params.env.forEditor());
-    
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, mode);
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode());
     
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
@@ -787,7 +785,7 @@ public class Driver {
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
       Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, new DoCompileMode(null, params.env.doGenerateFiles()));
+      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
       
       Set<RelativePath> importSourceFiles;
       if (res.a != null && !res.a.getSourceArtifacts().isEmpty())

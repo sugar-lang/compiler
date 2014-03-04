@@ -14,8 +14,6 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.mode.DoCompileMode;
-import org.sugarj.common.cleardep.mode.ForEditorMode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -122,9 +120,9 @@ public class ImportCommands {
     try {
       RelativePath transformedModelSourceFile = getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
       String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
-      Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath, environment);
+      Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath, environment, environment.getMode().getModeForRequiredModules());
   
-      if (transformedModelResult.a != null && transformedModelResult.a.isConsistent(params.editedSourceStamps, new ForEditorMode(new DoCompileMode(null, environment.doGenerateFiles()), environment.forEditor()))) {
+      if (transformedModelResult.a != null && transformedModelResult.b) {
         // result of transformation is already up-to-date, nothing to do here.
         driverResult.addModuleDependency(transformedModelResult.a);
         return Pair.create(transformedModelPath, false);
@@ -154,7 +152,10 @@ public class ImportCommands {
   private IStrategoTerm executeTransformation(RelativePath model, RelativePath transformationPath, IStrategoTerm toplevelDecl, Environment environment, STRCommands str, Driver driver) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
     IStrategoTerm modelTerm = ATermCommands.atermFromFile(model.getAbsolutePath());
     String strat = "main-" + FileCommands.dropExtension(transformationPath.getRelativePath()).replace('/', '_');
-    Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment);
+    Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules());
+    
+    if (transformationResult.a == null)
+      throw new IllegalStateException("Could not find compiled transformation.");
     
     Path trans = str.compile(transformationPath, strat, transformationResult.a.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
     
