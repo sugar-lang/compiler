@@ -9,11 +9,11 @@ import org.spoofax.interpreter.stratego.Strategy;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
-import org.sugarj.common.Renaming;
-import org.sugarj.common.Renaming.FromTo;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
 import org.sugarj.driver.ImportCommands;
+import org.sugarj.driver.Renaming;
+import org.sugarj.driver.Renaming.FromTo;
 
 /**
  * Primitive for looking up and loading a model according to the current environment.
@@ -46,7 +46,7 @@ class WriteTransformed extends AbstractPrimitive {
     
     try {
       FromTo ren = new FromTo(modelPath, source.getRelativePath());
-      environment.getRenamings().add(0, ren);
+      driver.getParameters().renamings.add(0, ren);
 //      generatedModel = driver.currentRename(generatedModel);
       
       driver.getCurrentResult().generateFile(source, ATermCommands.atermToString(generatedModel));

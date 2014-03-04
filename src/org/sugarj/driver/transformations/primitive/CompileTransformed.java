@@ -15,14 +15,15 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.Renaming;
-import org.sugarj.common.Renaming.FromTo;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
+import org.sugarj.driver.DriverParameters;
 import org.sugarj.driver.ModuleSystemCommands;
+import org.sugarj.driver.Renaming;
 import org.sugarj.driver.Result;
+import org.sugarj.driver.Renaming.FromTo;
 import org.sugarj.util.Pair;
 
 /**
@@ -34,6 +35,7 @@ import org.sugarj.util.Pair;
 class CompileTransformed extends AbstractPrimitive {
 
   private Driver driver;
+  private DriverParameters params;
   private Environment environment;
   
   public CompileTransformed(Driver driver, Environment environment) {
@@ -60,7 +62,7 @@ class CompileTransformed extends AbstractPrimitive {
       
       try {
         FromTo ren = new FromTo(modelPath, source.getRelativePath());
-        environment.getRenamings().add(0, ren);
+        params.renamings.add(0, ren);
 //        generatedModel = driver.currentRename(generatedModel);
         
         driver.getCurrentResult().generateFile(source, ATermCommands.atermToString(generatedModel));
@@ -87,7 +89,7 @@ class CompileTransformed extends AbstractPrimitive {
         driver.setErrorMessage(e.getMessage());
         return false;
       } finally {
-        environment.getRenamings().remove(0);
+        params.renamings.remove(0);
       }
       
       if (res == null)

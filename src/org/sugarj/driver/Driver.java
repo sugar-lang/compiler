@@ -50,13 +50,13 @@ import org.sugarj.common.CommandExecution;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.Renaming.FromTo;
 import org.sugarj.common.StringCommands;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.driver.Renaming.FromTo;
 import org.sugarj.driver.caching.ModuleKeyCache;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
@@ -304,7 +304,7 @@ public class Driver {
    * @throws InterruptedException 
    */
   private void process() throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
-    List<FromTo> originalRenamings = new LinkedList<FromTo>(params.env.getRenamings());
+    List<FromTo> originalRenamings = new LinkedList<FromTo>(params.renamings);
     params.currentlyProcessing.add(this);
     
     log.beginTask("processing", "Process " + params.sourceFiles, Log.CORE);
@@ -393,7 +393,8 @@ public class Driver {
     finally {
       log.endTask(success, "done processing " + params.sourceFiles, "failed to process " + params.sourceFiles);
       params.currentlyProcessing.remove(this);
-      params.env.setRenamings(originalRenamings);
+      params.renamings.clear();
+      params.renamings.addAll(originalRenamings);
 
       if (!interrupt)
         driverResult.write();
@@ -712,7 +713,7 @@ public class Driver {
         String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
         
         if (localModelName != null)
-          params.env.getRenamings().add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
+          params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
       } else {
         IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
         IStrategoTerm model = getApplicationSubterm(appl, "TransApp", 1);
@@ -730,9 +731,9 @@ public class Driver {
         String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
         
         if (localModelName != null)
-          params.env.getRenamings().add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
+          params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
         else
-          params.env.getRenamings().add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
+          params.renamings.add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
         
         IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(modulePath, toplevelDecl);
         desugaredBodyDecls.remove(toplevelDecl);
@@ -872,10 +873,10 @@ public class Driver {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor));
       }
       else
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor));
       return result;
     } catch (IOException e) {
       setErrorMessage("Problems while compiling " + importSourceFile);
@@ -1460,5 +1461,9 @@ public class Driver {
   
   public Environment getEnvironment() {
     return params.env;
+  }
+  
+  public DriverParameters getParameters() {
+    return params;
   }
 }

@@ -13,6 +13,7 @@ import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.driver.Renaming.FromTo;
 import org.sugarj.driver.declprovider.SourceToplevelDeclarationProvider;
 import org.sugarj.driver.declprovider.TermToplevelDeclarationProvider;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
@@ -59,6 +60,11 @@ public class DriverParameters {
   public final List<Driver> currentlyProcessing;
   
   /**
+   * Currently active renamings;
+   */
+  public final List<FromTo> renamings;
+  
+  /**
    * Eclipse progress monitor.
    */
   public final IProgressMonitor monitor;
@@ -68,10 +74,10 @@ public class DriverParameters {
   }
   
   public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, IProgressMonitor monitor) throws IOException {
-    return create(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<Driver>(), monitor);
+    return create(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, IProgressMonitor monitor) throws IOException {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor) throws IOException {
     String source = editedSources.get(sourceFile);
     if (source == null)
       source = FileCommands.readFileAsString(sourceFile);
@@ -83,10 +89,11 @@ public class DriverParameters {
         editedSourceStamps,
         new SourceToplevelDeclarationProvider(source, sourceFile),
         currentlyProcessing,
+        renamings,
         monitor);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, IProgressMonitor monitor) {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor) {
     return new DriverParameters(
         env,
         baseLang,
@@ -95,6 +102,7 @@ public class DriverParameters {
         editedSourceStamps,
         new TermToplevelDeclarationProvider(termSource, sourceFile, env),
         currentlyProcessing,
+        renamings,
         monitor);
   }
   
@@ -105,7 +113,8 @@ public class DriverParameters {
       Map<RelativePath, String> editedSources,
       Map<RelativePath, Integer> editedSourceStamps,
       ToplevelDeclarationProvider declProvider, 
-      List<Driver> currentlyProcessing, 
+      List<Driver> currentlyProcessing,
+      List<FromTo> renamings,
       IProgressMonitor monitor) {
     this.env = env;
     this.baseLang = baseLang;
@@ -114,6 +123,7 @@ public class DriverParameters {
     this.editedSourceStamps = editedSourceStamps;
     this.declProvider = declProvider;
     this.currentlyProcessing = currentlyProcessing;
+    this.renamings = renamings;
     this.monitor = monitor;
   }
   
