@@ -135,7 +135,7 @@ public class ImportCommands {
         String transformedModelText = ATermCommands.atermToString(transformedModel);
         driverResult.generateFile(transformedModelPath, transformedModelText);
         
-        boolean isCircularImport = driver.prepareImport(toplevelDecl, transformedModelPath.getRelativePath());
+        boolean isCircularImport = driver.prepareImport(toplevelDecl, FileCommands.dropExtension(transformedModelPath.getRelativePath()));
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
     } finally {
