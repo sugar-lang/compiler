@@ -167,28 +167,34 @@ public class ImportCommands {
 //            ATermCommands.makeString(FileCommands.dropExtension(model.getRelativePath()), null),
 //            ATermCommands.makeString(FileCommands.dropExtension(transformationPath.getRelativePath()), null));
 
+    IStrategoTerm transformedTerm;
     try {
-      IStrategoTerm transformedTerm = STRCommands.execute(strat, trans, modelTerm, baseProcessor.getInterpreter());
+      transformedTerm = STRCommands.execute(strat, trans, modelTerm, baseProcessor.getInterpreter());
 
-      // local renaming of model name according to transformation
-      IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, modelPath, Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment), trans, toplevelDecl);
-
-      return renamedTransformedModel;
     } catch (StrategoException e) {
       String msg = "Failed to apply transformation " + transformationPath.getRelativePath() + " to model " + modelPath.getRelativePath() + ": " + e.getMessage();
-      driver.setErrorMessage(toplevelDecl, msg);
-      throw new StrategoException(msg);
+//      driver.setErrorMessage(toplevelDecl, msg);
+      throw new StrategoException(msg, e);
     }
+    
+    // local renaming of model name according to transformation
+    IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, modelPath, Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment), trans, toplevelDecl);
+
+    return renamedTransformedModel;
   }
   
   private IStrategoTerm renameModel(IStrategoTerm transformedModel, RelativePath modelPath, RelativePath transformedModelPath, Path compiledTrans, IStrategoTerm toplevelDecl) {
     FromTo renaming = new FromTo(modelPath, transformedModelPath);
+    return renameModel(transformedModel, renaming, compiledTrans, toplevelDecl, transformedModelPath.toString());
+  }
+
+  public IStrategoTerm renameModel(IStrategoTerm model, FromTo renaming, Path compiledTrans, IStrategoTerm toplevelDecl, String modelDesc) {
     IStrategoTerm map = Renaming.makeRenamingHashtable(Collections.singletonList(renaming));
     IStrategoTerm[] targs = new IStrategoTerm[] {map};
     try {
-      return STRCommands.execute("apply-renamings", targs, compiledTrans, transformedModel, baseProcessor.getInterpreter());
-    } catch (IOException e) {
-      String msg = "Failed to rename transformedModel " + transformedModelPath + " from " + renaming.from + " to " + renaming.to + ": " + e.getMessage();
+      return STRCommands.execute("apply-renamings", targs, compiledTrans, model, baseProcessor.getInterpreter());
+    } catch (StrategoException | IOException e) {
+      String msg = "Failed to rename transformedModel " + modelDesc + " from " + renaming.from + " to " + renaming.to + ": " + e.getMessage();
       driver.setErrorMessage(toplevelDecl, msg);
       throw new StrategoException(msg);
     }

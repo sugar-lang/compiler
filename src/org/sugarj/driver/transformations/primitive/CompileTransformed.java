@@ -72,7 +72,7 @@ class CompileTransformed extends AbstractPrimitive {
       
       Result res;
       try {
-        res = driver.subcompile(driver.getTreeForErrorMarking(), source);
+        res = driver.subcompile(source);
         
         if (res != null) {
           context.setCurrent(ATermCommands.atermFromFile(source.getAbsolutePath()));

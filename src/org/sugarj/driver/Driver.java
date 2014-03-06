@@ -51,6 +51,7 @@ import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
+import org.sugarj.common.cleardep.CompilationUnit;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
@@ -92,7 +93,8 @@ public class Driver {
   private DriverParameters params;
   
   private Result driverResult;
-  
+  private ImportCommands imp;
+
   private SDFCommands sdf;
   private Path currentGrammarSDF;
   private String currentGrammarModule;
@@ -281,14 +283,13 @@ public class Driver {
       throw new IllegalArgumentException("Cannot yet handle driver calls with more than one source file; FIXME");
     
     RelativePath sourceFile1 = params.sourceFiles.iterator().next();
-    
-    
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
     this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode());
-    
+    imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
+
     baseProcessor.init(params.sourceFiles, params.env);
     initEditorServices();
   }
@@ -438,7 +439,7 @@ public class Driver {
 
   private void processToplevelDeclaration(IStrategoTerm toplevelDecl) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException {
     try {
-      if (baseLanguage.isImportDecl(toplevelDecl) || baseLanguage.isTransformationApplication(toplevelDecl)) {
+      if (baseLanguage.isImportDecl(toplevelDecl) || baseLanguage.isTransformationImport(toplevelDecl)) {
         if (inDesugaredDeclList || !params.env.isAtomicImportParsing())
           processImportDec(toplevelDecl);
         else
@@ -455,15 +456,16 @@ public class Driver {
       }
       else if (baseLanguage.isExtensionDecl(toplevelDecl))
         processExtensionDec(toplevelDecl);
-      else if (baseLanguage.isPlainDecl(toplevelDecl)) // XXX: Decide what to do
-                                                      // with "Plain"--leave in
-                                                      // the language or create
-                                                      // a new "Plain" language
+      else if (baseLanguage.isPlainDecl(toplevelDecl)) 
+        // XXX: Decide what to do with "Plain" -- leave in
+        // the language or create a new "Plain" language
         processPlainDec(toplevelDecl);
       else if (baseLanguage.isTransformationDec(toplevelDecl))
         processTransformationDec(toplevelDecl);
       else if (baseLanguage.isModelDec(toplevelDecl))
         processModelDec(toplevelDecl);
+      else if (baseLanguage.isExportDecl(toplevelDecl))
+        processExportDec(toplevelDecl);
       else if (ATermCommands.isList(toplevelDecl)) {
         /*
          * Desugarings may generate lists of toplevel declarations.
@@ -680,7 +682,7 @@ public class Driver {
         log.endSilent(); 
       }
     
-      if (term != null && (baseLanguage.isImportDecl(term) || baseLanguage.isTransformationApplication(term)))
+      if (term != null && (baseLanguage.isImportDecl(term) || baseLanguage.isTransformationImport(term)))
         pendingImports.add(term);
       else {
         params.declProvider.retract(term);
@@ -703,43 +705,17 @@ public class Driver {
     
     log.beginTask("processing", "PROCESS import declaration.", Log.CORE);
     try {
-      String modulePath;
-      boolean isCircularImport;
-      if (!baseLanguage.isTransformationApplication(toplevelDecl)) {
-        modulePath = baseProcessor.getModulePathOfImport(toplevelDecl);
-        
-        isCircularImport = prepareImport(toplevelDecl, modulePath);
-        
-        String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
-        
-        if (localModelName != null)
-          params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
-      } else {
-        IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
-        IStrategoTerm model = getApplicationSubterm(appl, "TransApp", 1);
-        IStrategoTerm transformation = getApplicationSubterm(appl, "TransApp", 0);
-        
-        ImportCommands imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
-        Pair<String, Boolean> transformationResult = imp.transformModel(model, transformation, toplevelDecl);
-
-        if (transformationResult == null)
-          return ;
-        
-        modulePath = transformationResult.a;
-        isCircularImport = transformationResult.b;
-        
-        String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
-        
-        if (localModelName != null)
-          params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
-        else
-          params.renamings.add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
-        
-        IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(modulePath, toplevelDecl);
-        desugaredBodyDecls.remove(toplevelDecl);
+      Pair<String, Boolean> importResult = processImportDecInternal(toplevelDecl);
+      if (importResult == null)
+        return ;
+      
+      IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(importResult.a, toplevelDecl);
+      if (desugaredBodyDecls.remove(toplevelDecl))
         desugaredBodyDecls.add(reconstructedImport);
-        toplevelDecl = reconstructedImport;
-      }
+      toplevelDecl = reconstructedImport;
+
+      String modulePath = importResult.a;
+      boolean isCircularImport = importResult.b;
       
       if (isCircularImport)
         return;
@@ -757,6 +733,40 @@ public class Driver {
     } finally {
       log.endTask();
     }
+  }
+  
+  private Pair<String,Boolean> processImportDecInternal(IStrategoTerm toplevelDecl) throws TokenExpectedException, ClassNotFoundException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+    if (!baseLanguage.isTransformationImport(toplevelDecl)) {
+      String modulePath = baseProcessor.getModulePathOfImport(toplevelDecl);
+      
+      boolean isCircularImport = prepareImport(toplevelDecl, modulePath);
+      
+      String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
+      
+      if (localModelName != null)
+        params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(modulePath)));
+      
+      return Pair.create(modulePath, isCircularImport);
+    } 
+    else {
+      IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
+      IStrategoTerm model = getApplicationSubterm(appl, "TransApp", 1);
+      IStrategoTerm transformation = getApplicationSubterm(appl, "TransApp", 0);
+      
+      Pair<String, Boolean> transformationResult = imp.transformModel(model, transformation, toplevelDecl);
+
+      if (transformationResult == null)
+        return null;
+      
+      String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
+      
+      if (localModelName != null)
+        params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(transformationResult.a)));
+      else
+        params.renamings.add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), transformationResult.a));
+      
+      return transformationResult;
+    }    
   }
 
   /**
@@ -813,7 +823,7 @@ public class Driver {
         
         // FIXME
         assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
-        res.a = subcompile(toplevelDecl, importSourceFiles.iterator().next());
+        res.a = subcompile(importSourceFiles.iterator().next());
         if (res.a == null || res.a.hasFailed())
           setErrorMessage("Problems while compiling " + modulePath);
           
@@ -868,7 +878,7 @@ public class Driver {
    * @return
    * @throws InterruptedException
    */
-  public Result subcompile(IStrategoTerm toplevelDecl, RelativePath importSourceFile) throws InterruptedException {
+  public Result subcompile(RelativePath importSourceFile) throws InterruptedException {
     try {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
@@ -928,6 +938,66 @@ public class Driver {
     }
     
     return false;
+  }
+  
+  private void processExportDec(IStrategoTerm toplevelDecl) throws IOException, TokenExpectedException, ClassNotFoundException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+    if (!sugaredBodyDecls.contains(lastSugaredToplevelDecl))
+      sugaredBodyDecls.add(lastSugaredToplevelDecl);
+    if (!desugaredBodyDecls.contains(toplevelDecl))
+      desugaredBodyDecls.add(toplevelDecl);
+    
+    IStrategoTerm otherModule = baseProcessor.getImportForExport(toplevelDecl);
+    
+    Pair<String, Boolean> importModelResult = processImportDecInternal(otherModule);
+    if (importModelResult == null) {
+      setErrorMessage(toplevelDecl, "Could not resolve module for export: " + otherModule);
+      return ;
+    }
+    if (importModelResult.b) {
+      setErrorMessage(toplevelDecl, "Export is cyclic: " + otherModule);
+      return ;
+    }
+    
+    RelativePath importModelPath = ModuleSystemCommands.importModel(importModelResult.a, params.env, driverResult);
+    if (importModelPath == null) {
+      setErrorMessage(toplevelDecl, "Cannot locate generated model: " + importModelResult.a);
+      return ;
+    }
+
+    String thisModuleName = baseProcessor.getRelativeNamespaceSep() + baseLanguage.getExportName(toplevelDecl);
+    RelativePath thisModelPath = params.env.createOutPath(thisModuleName + ".model");
+
+    IStrategoTerm importModel = ATermCommands.atermFromFile(importModelPath.getAbsolutePath());
+    FromTo renaming = new FromTo(importModelPath, thisModelPath);
+    IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
+    ATermCommands.atermToFile(thisModel, thisModelPath);
+    
+    Result modelResult = subcompile(thisModelPath);
+    
+    boolean modelFailed = modelResult.hasFailed();
+    Set<CompilationUnit> modelDependencies = modelResult.getModuleDependencies();
+    Set<CompilationUnit> modelCircularDepdencnies = modelResult.getCircularModuleDependencies();
+    Set<Path> modelGeneratedFiles = modelResult.getGeneratedFiles();
+    Set<Path> modelExternalFileDependencies = modelResult.getExternalFileDependencies(); 
+    
+    RelativePath sourceFile1 = params.sourceFiles.iterator().next();
+    String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
+    Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
+    Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode());
+    
+    if (modelFailed)
+      driverResult.setFailed(true);
+    for (CompilationUnit cu : modelDependencies)
+      driverResult.addModuleDependency(cu);
+    for (CompilationUnit cu : modelCircularDepdencnies)
+      driverResult.addCircularModuleDependency(cu);
+    for (Path p : modelGeneratedFiles)
+      driverResult.addGeneratedFile(p);
+    for (Path p : modelExternalFileDependencies)
+      driverResult.addExternalFileDependency(p);
+    
+    generateModel();
   }
 
   private List<String> processLanguageDec(IStrategoTerm toplevelDecl) throws IOException {
