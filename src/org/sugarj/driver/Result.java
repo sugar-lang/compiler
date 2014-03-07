@@ -69,17 +69,17 @@ public class Result extends CompilationUnit {
   
   public void addExternalFileDependency(RelativePath file, int stampOfFile) {
     super.addExternalFileDependency(file, stampOfFile);
-    transitivelyAffectedFiles.put(file, stampOfFile);
+    getTransitivelyAffectedFileStamps().put(file, stampOfFile);
   }
   
   public void addGeneratedFile(Path file, int stampOfFile) {
     super.addGeneratedFile(file, stampOfFile);
-    transitivelyAffectedFiles.put(file, stampOfFile);
+    getTransitivelyAffectedFileStamps().put(file, stampOfFile);
   }
   
   public void addModuleDependency(Result mod) throws IOException {
     super.addModuleDependency(mod);
-    transitivelyAffectedFiles.putAll(mod.getTransitivelyAffectedFileStamps());
+    getTransitivelyAffectedFileStamps().putAll(mod.getTransitivelyAffectedFileStamps());
   }
 
   private Map<Path, Integer> getTransitivelyAffectedFileStamps() {

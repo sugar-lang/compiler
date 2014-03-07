@@ -49,30 +49,47 @@ public class ImportCommands {
    * @param asModel If true, looks for models. If false, looks for transformations.
    * @return
    */
-  private RelativePath resolveModule(IStrategoTerm term, IStrategoTerm toplevelDecl, boolean asModel) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  public Pair<RelativePath, Boolean> resolveModule(IStrategoTerm term, IStrategoTerm toplevelDecl, boolean asModel) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     if (ATermCommands.isApplication(term, "TransApp")) {
       IStrategoTerm model = ATermCommands.getApplicationSubterm(term, "TransApp", 1);
       IStrategoTerm transformation = ATermCommands.getApplicationSubterm(term, "TransApp", 0);
-      Pair<String, Boolean> transformedModel = transformModel(model, transformation, toplevelDecl);
-      if (transformedModel != null) {
-        if (asModel)
-          return ModuleSystemCommands.importModel(transformedModel.a, environment, driverResult);
-        else
-          return ModuleSystemCommands.importStratego(transformedModel.a, environment, driverResult);
-      }
-      return null;
+      
+      Pair<RelativePath, Boolean> resolvedModel = resolveModule(model, toplevelDecl, true);
+      Pair<RelativePath, Boolean> resolvedTransformation = resolveModule(transformation, toplevelDecl, false);
+      if (resolvedModel == null || resolvedTransformation == null)
+        return null;
+      
+      Pair<String, Boolean> transformedModel = transformModel(resolvedModel.a, resolvedTransformation.a, toplevelDecl);
+      
+      if (transformedModel == null)
+        return null;
+      
+      RelativePath p;
+      if (asModel)
+        p = ModuleSystemCommands.importModel(transformedModel.a, environment, driverResult);
+      else
+        p = ModuleSystemCommands.importStratego(transformedModel.a, environment, driverResult);
+      
+      if (p == null)
+        return null;
+      return Pair.create(p, resolvedModel.b || resolvedTransformation.b || transformedModel.b);
     }
     
     String path = baseProcessor.getModulePath(term);
     if (path.contains("/")) {
       boolean isCircularImport = driver.prepareImport(toplevelDecl, path);
       if (isCircularImport)
-        return null;
+        throw new RuntimeException("Circular import in transformation application");
       
+      RelativePath p;
       if (asModel)
-        return ModuleSystemCommands.importModel(path, environment, driverResult);
+        p = ModuleSystemCommands.importModel(path, environment, driverResult);
       else
-        return ModuleSystemCommands.importStratego(path, environment, driverResult);
+        p = ModuleSystemCommands.importStratego(path, environment, driverResult);
+      
+      if (p == null)
+        return null;
+      return Pair.create(p, isCircularImport);
     }
     
     throw new RuntimeException("TODO support non-qualifed transformations and model paths");
@@ -91,37 +108,10 @@ public class ImportCommands {
    * @param driver
    * @return a pair consisting of the path to the transformed model and a flag indicating a circular import (if true). 
    */
-  public Pair<String, Boolean> transformModel(IStrategoTerm model, IStrategoTerm transformation, IStrategoTerm toplevelDecl) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
-    RelativePath modelPath = resolveModule(model, toplevelDecl, true);
-    RelativePath transformationPath = resolveModule(transformation, toplevelDecl, false);
-    
-    if (modelPath == null) {
-      // something's wrong
-      String name;
-      try {
-        name = baseProcessor.getModulePath(model);
-      } catch (Exception e) {
-        name = model.toString();
-      }
-      driver.setErrorMessage(toplevelDecl, "model not found " + name);
-      return null;
-    }
-    if (transformationPath == null) {
-      // something's wrong
-      String name;
-      try {
-        name = baseProcessor.getModulePath(transformation);
-      } catch (Exception e) {
-        name = transformation.toString();
-      }
-      driver.setErrorMessage(toplevelDecl, "transformation not found " + name);
-      return null;
-    }
-
+  public Pair<String, Boolean> transformModel(RelativePath modelPath, RelativePath transformationPath, IStrategoTerm toplevelDecl) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     Log.log.beginTask("Transform model " + FileCommands.fileName(modelPath) + " with transformation " + FileCommands.fileName(transformationPath), Log.TRANSFORM);
     try {
       RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
-//      String transformedModelPath = FileCommands.dropExtension(transformedModelSourceFile.getRelativePath());
       Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
   
       if (transformedModelResult.a != null && transformedModelResult.b) {
@@ -136,6 +126,17 @@ public class ImportCommands {
         driverResult.generateFile(transformedModelPath, transformedModelText);
         
         boolean isCircularImport = driver.prepareImport(toplevelDecl, FileCommands.dropExtension(transformedModelPath.getRelativePath()));
+        
+        transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
+        Pair<Result, Boolean> modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
+        Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
+        if (transformationResult == null || modelResult == null | transformationResult == null)
+          throw new IllegalStateException("Could not locate all required compilation results: " + transformationResult + ", " + modelResult + ", " + transformationResult);
+        
+        transformedModelResult.a.addModuleDependency(modelResult.a);
+        transformedModelResult.a.addModuleDependency(transformationResult.a);
+        transformationResult.a.write();
+        
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
     } finally {

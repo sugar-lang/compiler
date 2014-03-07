@@ -752,22 +752,21 @@ public class Driver {
     } 
     else {
       IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
-      IStrategoTerm model = getApplicationSubterm(appl, "TransApp", 1);
-      IStrategoTerm transformation = getApplicationSubterm(appl, "TransApp", 0);
       
-      Pair<String, Boolean> transformationResult = imp.transformModel(model, transformation, toplevelDecl);
-
+      Pair<RelativePath, Boolean> transformationResult = imp.resolveModule(appl, toplevelDecl, true);
+      
       if (transformationResult == null)
         return null;
       
+      String modulePath = FileCommands.dropExtension(transformationResult.a.getRelativePath());
       String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
       
       if (localModelName != null)
         params.renamings.add(0, new FromTo(Collections.<String>emptyList(), localModelName, FileCommands.fileName(transformationResult.a)));
       else
-        params.renamings.add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), transformationResult.a));
+        params.renamings.add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
       
-      return transformationResult;
+      return Pair.create(modulePath, transformationResult.b);
     }    
   }
 
