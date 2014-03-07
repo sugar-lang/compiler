@@ -135,7 +135,9 @@ public class ImportCommands {
         
         transformedModelResult.a.addModuleDependency(modelResult.a);
         transformedModelResult.a.addModuleDependency(transformationResult.a);
-        transformationResult.a.write();
+        transformedModelResult.a.addExternalFileDependencyLate(modelPath);
+        transformedModelResult.a.addExternalFileDependencyLate(transformationPath);
+        transformedModelResult.a.write();
         
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
