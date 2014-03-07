@@ -652,7 +652,9 @@ public class Driver {
       if (currentTransProg == null)
         return term;
       
-      IStrategoTerm result = STRCommands.execute("apply-renamings", currentTransProg, term, baseProcessor.getInterpreter());
+      IStrategoTerm map = Renaming.makeRenamingHashtable(params.renamings);
+      IStrategoTerm[] targs = new IStrategoTerm[] {map};
+      IStrategoTerm result = STRCommands.execute("apply-renamings", targs, currentTransProg, term, baseProcessor.getInterpreter());
       return result == null ? term : result;
     } catch (StrategoException e) {
       String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
@@ -705,7 +707,7 @@ public class Driver {
     
     log.beginTask("processing", "PROCESS import declaration.", Log.CORE);
     try {
-      Pair<String, Boolean> importResult = processImportDecInternal(toplevelDecl);
+      Pair<String, Boolean> importResult = resolveImportDec(toplevelDecl);
       if (importResult == null)
         return ;
       
@@ -735,7 +737,7 @@ public class Driver {
     }
   }
   
-  private Pair<String,Boolean> processImportDecInternal(IStrategoTerm toplevelDecl) throws TokenExpectedException, ClassNotFoundException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+  public Pair<String,Boolean> resolveImportDec(IStrategoTerm toplevelDecl) throws TokenExpectedException, ClassNotFoundException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
     if (!baseLanguage.isTransformationImport(toplevelDecl)) {
       String modulePath = baseProcessor.getModulePathOfImport(toplevelDecl);
       
@@ -948,7 +950,7 @@ public class Driver {
     
     IStrategoTerm otherModule = baseProcessor.getImportForExport(toplevelDecl);
     
-    Pair<String, Boolean> importModelResult = processImportDecInternal(otherModule);
+    Pair<String, Boolean> importModelResult = resolveImportDec(otherModule);
     if (importModelResult == null) {
       setErrorMessage(toplevelDecl, "Could not resolve module for export: " + otherModule);
       return ;
@@ -971,14 +973,20 @@ public class Driver {
     FromTo renaming = new FromTo(importModelPath, thisModelPath);
     IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
     ATermCommands.atermToFile(thisModel, thisModelPath);
-    
+
+    boolean failed = driverResult.hasFailed();
+    Set<CompilationUnit> dependencies = new HashSet<>(driverResult.getModuleDependencies());
+    Set<CompilationUnit> circularDepdencnies = new HashSet<>(driverResult.getCircularModuleDependencies());
+    Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
+    Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies()); 
+
     Result modelResult = subcompile(thisModelPath);
     
-    boolean modelFailed = modelResult.hasFailed();
-    Set<CompilationUnit> modelDependencies = modelResult.getModuleDependencies();
-    Set<CompilationUnit> modelCircularDepdencnies = modelResult.getCircularModuleDependencies();
-    Set<Path> modelGeneratedFiles = modelResult.getGeneratedFiles();
-    Set<Path> modelExternalFileDependencies = modelResult.getExternalFileDependencies(); 
+    failed |= modelResult.hasFailed();
+    dependencies.addAll(modelResult.getModuleDependencies());
+    circularDepdencnies.addAll(modelResult.getCircularModuleDependencies());
+    generatedFiles.addAll(modelResult.getGeneratedFiles());
+    externalFileDependencies.addAll(modelResult.getExternalFileDependencies()); 
     
     RelativePath sourceFile1 = params.sourceFiles.iterator().next();
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
@@ -986,15 +994,15 @@ public class Driver {
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode());
     
-    if (modelFailed)
+    if (failed)
       driverResult.setFailed(true);
-    for (CompilationUnit cu : modelDependencies)
+    for (CompilationUnit cu : dependencies)
       driverResult.addModuleDependency(cu);
-    for (CompilationUnit cu : modelCircularDepdencnies)
+    for (CompilationUnit cu : circularDepdencnies)
       driverResult.addCircularModuleDependency(cu);
-    for (Path p : modelGeneratedFiles)
+    for (Path p : generatedFiles)
       driverResult.addGeneratedFile(p);
-    for (Path p : modelExternalFileDependencies)
+    for (Path p : externalFileDependencies)
       driverResult.addExternalFileDependency(p);
     
     generateModel();
