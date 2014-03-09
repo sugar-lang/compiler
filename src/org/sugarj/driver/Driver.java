@@ -52,6 +52,7 @@ import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
 import org.sugarj.common.cleardep.CompilationUnit;
+import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
@@ -287,7 +288,7 @@ public class Driver {
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
     
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode());
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode(), params.syn);
     imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
 
     baseProcessor.init(params.sourceFiles, params.env);
@@ -448,7 +449,7 @@ public class Driver {
       else if (baseLanguage.isBaseDecl(toplevelDecl)) {
         List<String> additionalModules = processLanguageDec(toplevelDecl);
         for (String module : additionalModules) {
-          prepareImport(toplevelDecl, module);
+          prepareImport(toplevelDecl, module, null);
           Path clazz = ModuleSystemCommands.importBinFile(module, params.env, baseProcessor, driverResult);
           if (clazz == null)
             setErrorMessage(toplevelDecl, "Could not resolve required module " + module);
@@ -741,7 +742,7 @@ public class Driver {
     if (!baseLanguage.isTransformationImport(toplevelDecl)) {
       String modulePath = baseProcessor.getModulePathOfImport(toplevelDecl);
       
-      boolean isCircularImport = prepareImport(toplevelDecl, modulePath);
+      boolean isCircularImport = prepareImport(toplevelDecl, modulePath, null);
       
       String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
       
@@ -753,7 +754,7 @@ public class Driver {
     else {
       IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
       
-      Pair<RelativePath, Boolean> transformationResult = imp.resolveModule(appl, toplevelDecl, true);
+      Pair<RelativePath, Boolean> transformationResult = imp.resolveModule(appl, true);
       
       if (transformationResult == null)
         return null;
@@ -788,8 +789,10 @@ public class Driver {
    * @throws TokenExpectedException 
    * @throws ClassNotFoundException 
    */
-  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, Synthesizer syn) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     boolean isCircularImport = false;
+    if (syn == null)
+      syn = params.syn;
     
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
@@ -824,7 +827,7 @@ public class Driver {
         
         // FIXME
         assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
-        res.a = subcompile(importSourceFiles.iterator().next());
+        res.a = subcompile(importSourceFiles.iterator().next(), syn);
         if (res.a == null || res.a.hasFailed())
           setErrorMessage("Problems while compiling " + modulePath);
           
@@ -879,15 +882,17 @@ public class Driver {
    * @return
    * @throws InterruptedException
    */
-  public Result subcompile(RelativePath importSourceFile) throws InterruptedException {
+  public Result subcompile(RelativePath importSourceFile, Synthesizer syn) throws InterruptedException {
+    if (syn == null)
+      syn = params.syn;
     try {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor, syn));
       }
       else
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor, syn));
       return result;
     } catch (IOException e) {
       setErrorMessage("Problems while compiling " + importSourceFile);
@@ -979,7 +984,8 @@ public class Driver {
     Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
     Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies()); 
 
-    Result modelResult = subcompile(thisModelPath);
+    // TODO Declare a synthesizer?
+    Result modelResult = subcompile(thisModelPath, null);
     
     failed |= modelResult.hasFailed();
     dependencies.addAll(modelResult.getModuleDependencies());
@@ -991,7 +997,7 @@ public class Driver {
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode());
+    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode(), params.syn);
     
     if (failed)
       driverResult.setFailed(true);
