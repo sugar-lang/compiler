@@ -118,11 +118,26 @@ public class ImportCommands {
     try {
       RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
       Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-  
+      
+      Pair<Result, Boolean> modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      if (transformationResult == null || modelResult == null | transformationResult == null)
+        throw new IllegalStateException("Could not locate all required compilation results: " + transformationResult + ", " + modelResult + ", " + transformationResult);
+      Set<CompilationUnit> synModules = new HashSet<>();
+      synModules.add(modelResult.a);
+      synModules.add(transformationResult.a);
+      Set<Path> synFiles = new HashSet<>();
+      synFiles.add(modelPath);
+      synFiles.add(transformationPath);
+      Synthesizer syn = new Synthesizer(environment.getStamper(), synModules, synFiles);
+
+      String modulePath = FileCommands.dropExtension(transformedModelPath.getRelativePath());
+      IStrategoTerm importTerm = baseProcessor.reconstructImport(modulePath);
+      
       if (transformedModelResult.a != null && transformedModelResult.b) {
         // result of transformation is already up-to-date, nothing to do here.
-        driverResult.addModuleDependency(transformedModelResult.a);
-        return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), false);
+        boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
+        return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
       else {
         // transform the model, prepare the import of the resulting code.
@@ -130,20 +145,7 @@ public class ImportCommands {
         String transformedModelText = ATermCommands.atermToString(transformedModel);
         driverResult.generateFile(transformedModelPath, transformedModelText);
         
-        Pair<Result, Boolean> modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-        Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-        if (transformationResult == null || modelResult == null | transformationResult == null)
-          throw new IllegalStateException("Could not locate all required compilation results: " + transformationResult + ", " + modelResult + ", " + transformationResult);
-
-        Set<CompilationUnit> synModules = new HashSet<>();
-        synModules.add(modelResult.a);
-        synModules.add(transformationResult.a);
-        Set<Path> synFiles = new HashSet<>();
-        synFiles.add(modelPath);
-        synFiles.add(transformationPath);
-        Synthesizer syn = new Synthesizer(environment.getStamper(), synModules, synFiles);
-        
-        boolean isCircularImport = driver.prepareImport(term, FileCommands.dropExtension(transformedModelPath.getRelativePath()), syn);
+        boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
         
         
 //        transformedModelResult.a.addModuleDependency(modelResult.a);
@@ -197,7 +199,7 @@ public class ImportCommands {
           builder.append(", ");
       }
       
-      driver.setErrorMessage(toplevelDecl, "Generated model contains hidden dependencies injected by transformation: " + builder.toString());
+      driver.setErrorMessage(toplevelDecl, "Generated model contains hidden dependencies " + builder.toString() + " injected by transformation " + transformationResult.getName() + ".");
     }
   }
 

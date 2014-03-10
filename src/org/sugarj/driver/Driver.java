@@ -420,7 +420,8 @@ public class Driver {
           baseProcessor.compile(
               baseProcessor.getGeneratedSourceFile(), 
               baseProcessor.getGeneratedSource(),
-              params.env.getBin(), 
+              params.env.getBin(),
+              driverResult,
               new ArrayList<Path>(params.env.getIncludePath()), 
               driverResult.getDeferredSourceFiles());
         for (Path file : generatedFiles)
@@ -712,7 +713,7 @@ public class Driver {
       if (importResult == null)
         return ;
       
-      IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(importResult.a, toplevelDecl);
+      IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(importResult.a);
       if (desugaredBodyDecls.remove(toplevelDecl))
         desugaredBodyDecls.add(reconstructedImport);
       toplevelDecl = reconstructedImport;
