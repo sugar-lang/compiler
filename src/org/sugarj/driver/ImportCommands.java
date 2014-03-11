@@ -148,13 +148,6 @@ public class ImportCommands {
         driverResult.generateFile(transformedModelPath, transformedModelText);
         
         boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
-        
-        
-//        transformedModelResult.a.addModuleDependency(modelResult.a);
-//        transformedModelResult.a.addModuleDependency(transformationResult.a);
-//        transformedModelResult.a.addExternalFileDependencyLate(modelPath);
-//        transformedModelResult.a.addExternalFileDependencyLate(transformationPath);
-//        transformedModelResult.a.write();
 
         transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
         checkCommunicationIntegrity(transformedModelResult.a, modelResult.a, transformationResult.a, term);
@@ -281,5 +274,26 @@ public class ImportCommands {
     if (ATermCommands.isApplication(appl, "TransApp"))
       return getTransformationApplicationModelPath(appl.getSubterm(1), baseProcessor);
     return baseProcessor.getModulePath(appl);
+  }
+
+  public String computeModulePathOfImport(IStrategoTerm importTerm) {
+    if (!baseProcessor.getLanguage().isTransformationImport(importTerm))
+      return baseProcessor.getModulePathOfImport(importTerm);
+    
+    IStrategoTerm appl = baseProcessor.getLanguage().getTransformationApplication(importTerm);
+    return computeModulePathOfAppl(appl);
+  }
+
+  private String computeModulePathOfAppl(IStrategoTerm term) {
+    if (!ATermCommands.isApplication(term, "TransApp"))
+      return baseProcessor.getModulePath(term);
+    
+    IStrategoTerm model = ATermCommands.getApplicationSubterm(term, "TransApp", 1);
+    IStrategoTerm transformation = ATermCommands.getApplicationSubterm(term, "TransApp", 0);
+    
+    String modelPath = computeModulePathOfAppl(model);
+    String transformationPath = computeModulePathOfAppl(transformation);
+    
+    return modelPath + "__" + transformationPath.replace('/', '_');
   }
 }

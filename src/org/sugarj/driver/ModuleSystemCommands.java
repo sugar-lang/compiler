@@ -138,7 +138,7 @@ public class ModuleSystemCommands {
   public static RelativePath locateSourceFileOrModel(String modulePath, List<Path> sourcePath, AbstractBaseProcessor baseProcessor, Environment environment) {
     RelativePath result = locateSourceFile(modulePath, baseProcessor.getLanguage().getSugarFileExtension(), sourcePath);
     if (result == null)
-      result = searchFile(modulePath, "model", environment, null);
+      result = searchFile(environment.createOutPath(modulePath + ".model"), null);
     if (result == null && baseProcessor.getLanguage().getBaseFileExtension() != null)
       result = locateSourceFile(modulePath, baseProcessor.getLanguage().getBaseFileExtension(), sourcePath);
     return result;
@@ -235,6 +235,18 @@ public class ModuleSystemCommands {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), FileCommands.dropExtension(modulePath) + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    return Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
+    Pair<Result, Boolean> result = Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
+    if (result.a != null)
+      return result;
+    
+    for (Path base : env.getIncludePath()) {
+      compileDep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
+      
+      result = Result.read(env.getStamper(), compileDep, null, editedSourceFiles, mode);
+      if (result.a != null)
+        return result;
+    }
+    
+    return Pair.create(null, false);
   }
 }
