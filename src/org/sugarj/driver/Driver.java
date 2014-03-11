@@ -357,7 +357,8 @@ public class Driver {
       stepped();
       
       // GENERATE model
-      generateModel();
+      if (params.syn == null)
+        generateModel();
       
       // COMPILE the generated java file
       if (circularLinks.isEmpty())
