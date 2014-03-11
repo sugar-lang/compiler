@@ -21,6 +21,7 @@ import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.cleardep.mode.ForEditorMode;
 import org.sugarj.common.cleardep.mode.Mode;
+import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;

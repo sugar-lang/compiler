@@ -7,6 +7,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.spoofax.interpreter.core.VarScope;
+import org.spoofax.interpreter.stratego.Build;
+import org.spoofax.interpreter.stratego.SDefT;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.InvalidParseTableException;
 import org.spoofax.jsglr.shared.BadTokenException;
@@ -35,7 +38,9 @@ public class ImportCommands {
   private Driver driver;
   private DriverParameters params;
   private Result driverResult;
-  private STRCommands str; 
+  private STRCommands str;
+  
+  private String currentTransName;
   
   public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, DriverParameters params, Result driverResult, STRCommands str) {
     this.baseProcessor = baseProcessor;
@@ -213,7 +218,8 @@ public class ImportCommands {
    */
   private IStrategoTerm executeTransformation(RelativePath modelPath, RelativePath transformationPath, IStrategoTerm toplevelDecl) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
     IStrategoTerm modelTerm = ATermCommands.atermFromFile(modelPath.getAbsolutePath());
-    String strat = "main-" + FileCommands.dropExtension(transformationPath.getRelativePath()).replace('/', '_');
+    String transName = FileCommands.dropExtension(transformationPath.getRelativePath());
+    String strat = "main-" + transName.replace('/', '_');
     Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules(), null);
     
     if (transformationResult.a == null)
@@ -229,18 +235,24 @@ public class ImportCommands {
 
     IStrategoTerm transformedTerm;
     try {
+      currentTransName = transName;
       transformedTerm = STRCommands.execute(strat, trans, modelTerm, baseProcessor.getInterpreter());
-
     } catch (StrategoException e) {
       String msg = "Failed to apply transformation " + transformationPath.getRelativePath() + " to model " + modelPath.getRelativePath() + ": " + e.getMessage();
 //      driver.setErrorMessage(toplevelDecl, msg);
       throw new StrategoException(msg, e);
+    } finally {
+      currentTransName = null;
     }
     
     // local renaming of model name according to transformation
     IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, modelPath, Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment), trans, toplevelDecl);
 
     return renamedTransformedModel;
+  }
+  
+  public String getCurrentTransName() {
+    return currentTransName;
   }
   
   private IStrategoTerm renameModel(IStrategoTerm transformedModel, RelativePath modelPath, RelativePath transformedModelPath, Path compiledTrans, IStrategoTerm toplevelDecl) {

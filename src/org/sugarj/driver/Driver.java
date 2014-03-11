@@ -253,7 +253,6 @@ public class Driver {
     baseProcessor.setInterpreter(new HybridInterpreter());
     HybridInterpreter interp = baseProcessor.getInterpreter();
     
-    interp.addOperatorRegistry(new SugarJPrimitivesLibrary(this, params.env, driverResult, params.monitor));
     analysisDataInterop = new AnalysisDataInterop();
     analysisDataInterop.createInteropRegisterer().register(interp.getContext(), interp.getCompiledContext());
     
@@ -292,6 +291,7 @@ public class Driver {
     imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
 
     baseProcessor.init(params.sourceFiles, params.env);
+    baseProcessor.getInterpreter().addOperatorRegistry(new SugarJPrimitivesLibrary(this, imp));
     initEditorServices();
   }
 
@@ -792,8 +792,6 @@ public class Driver {
    */
   protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, Synthesizer syn) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     boolean isCircularImport = false;
-    if (syn == null)
-      syn = params.syn;
     
     if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
       Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
@@ -884,8 +882,6 @@ public class Driver {
    * @throws InterruptedException
    */
   public Result subcompile(RelativePath importSourceFile, Synthesizer syn) throws InterruptedException {
-    if (syn == null)
-      syn = params.syn;
     try {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
