@@ -7,9 +7,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.spoofax.interpreter.core.VarScope;
-import org.spoofax.interpreter.stratego.Build;
-import org.spoofax.interpreter.stratego.SDefT;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.InvalidParseTableException;
 import org.spoofax.jsglr.shared.BadTokenException;

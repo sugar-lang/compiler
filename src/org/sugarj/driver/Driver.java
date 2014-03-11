@@ -826,6 +826,9 @@ public class Driver {
         
         // FIXME
         assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
+        
+        if (syn == null && res != null && res.a != null)
+          syn = res.a.getSynthesizer();
         res.a = subcompile(importSourceFiles.iterator().next(), syn);
         if (res.a == null || res.a.hasFailed())
           setErrorMessage("Problems while compiling " + modulePath);
