@@ -150,7 +150,7 @@ public class ImportCommands {
         boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
 
         transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-        checkCommunicationIntegrity(transformedModelResult.a, modelResult.a, transformationResult.a, term);
+        checkCommunicationIntegrity(transformedModelResult.a, term);
         
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
@@ -159,18 +159,19 @@ public class ImportCommands {
     }
   }
   
-  private void checkCommunicationIntegrity(Result transformedModelResult, Result modelResult, Result transformationResult, IStrategoTerm toplevelDecl) {
+  private void checkCommunicationIntegrity(Result transformedModelResult, IStrategoTerm toplevelDecl) {
     Set<CompilationUnit> usedModules = new HashSet<>();
     usedModules.addAll(transformedModelResult.getModuleDependencies());
     usedModules.addAll(transformedModelResult.getCircularModuleDependencies());
+
+    if (transformedModelResult.getSynthesizer() == null)
+      throw new IllegalArgumentException("Argument " + transformedModelResult + " must be a generated module with getSynthesizer() != null");
     
-    Set<CompilationUnit> allowedModules = new HashSet<>();
-    allowedModules.add(modelResult);
-    allowedModules.add(transformationResult);
-    allowedModules.addAll(modelResult.getModuleDependencies());
-    allowedModules.addAll(modelResult.getCircularModuleDependencies());
-    allowedModules.addAll(transformationResult.getModuleDependencies());
-    allowedModules.addAll(transformationResult.getCircularModuleDependencies());
+    Set<CompilationUnit> allowedModules = new HashSet<>(transformedModelResult.getSynthesizer().modules);
+    for (CompilationUnit mod : transformedModelResult.getSynthesizer().modules) {
+      allowedModules.addAll(mod.getModuleDependencies());
+      allowedModules.addAll(mod.getCircularModuleDependencies());
+    }
     
     Set<CompilationUnit> lastUsedModules = new HashSet<>();
     while (!usedModules.isEmpty() && !lastUsedModules.equals(usedModules)) {
@@ -194,7 +195,7 @@ public class ImportCommands {
           builder.append(", ");
       }
       
-      driver.setErrorMessage(toplevelDecl, "Generated model contains hidden dependencies " + builder.toString() + " injected by transformation " + transformationResult.getName() + ".");
+      driver.setErrorMessage(toplevelDecl, "Generated model contains hidden dependencies " + builder.toString() + ".");
     }
   }
 
