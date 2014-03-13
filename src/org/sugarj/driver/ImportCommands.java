@@ -173,23 +173,14 @@ public class ImportCommands {
       allowedModules.addAll(mod.getCircularModuleDependencies());
     }
     
-    Set<CompilationUnit> lastUsedModules = new HashSet<>();
-    while (!usedModules.isEmpty() && !lastUsedModules.equals(usedModules)) {
-      lastUsedModules.clear();
-      lastUsedModules.addAll(usedModules);
-      usedModules.clear();
-      for (CompilationUnit mod : lastUsedModules)
-        if (allowedModules.contains(mod))
-          continue;
-        else if (mod.getSynthesizer() != null)
-          usedModules.addAll(mod.getSynthesizer().modules);
-        else
-          usedModules.add(mod);
-    }
+    Set<CompilationUnit> hiddenDependencies = new HashSet<>();
+    for (CompilationUnit m : usedModules)
+      if (!checkCommunicationIntegrityDepOK(m, allowedModules))
+        hiddenDependencies.add(m);
     
-    if (!usedModules.isEmpty()) {
+    if (!hiddenDependencies.isEmpty()) {
       StringBuilder builder = new StringBuilder();
-      for (Iterator<CompilationUnit> it = usedModules.iterator(); it.hasNext(); ) {
+      for (Iterator<CompilationUnit> it = hiddenDependencies.iterator(); it.hasNext(); ) {
         builder.append(it.next().getName());
         if (it.hasNext())
           builder.append(", ");
@@ -197,6 +188,17 @@ public class ImportCommands {
       
       driver.setErrorMessage(toplevelDecl, "Generated model contains hidden dependencies " + builder.toString() + ".");
     }
+  }
+  
+  private boolean checkCommunicationIntegrityDepOK(CompilationUnit m, Set<CompilationUnit> allowed) {
+    if (allowed.contains(m))
+      return true;
+    if (m.getSynthesizer() == null)
+      return false;
+    for (CompilationUnit m2 : m.getSynthesizer().modules)
+      if (!checkCommunicationIntegrityDepOK(m2, allowed))
+        return false;
+    return true;
   }
 
   /**
