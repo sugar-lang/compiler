@@ -38,6 +38,7 @@ public class ImportCommands {
   private STRCommands str;
   
   private String currentTransName;
+  private String currentModelName;
   
   public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, DriverParameters params, Result driverResult, STRCommands str) {
     this.baseProcessor = baseProcessor;
@@ -211,6 +212,7 @@ public class ImportCommands {
    */
   private IStrategoTerm executeTransformation(RelativePath modelPath, RelativePath transformationPath, IStrategoTerm toplevelDecl) throws IOException, TokenExpectedException, BadTokenException, InvalidParseTableException, SGLRException {
     IStrategoTerm modelTerm = ATermCommands.atermFromFile(modelPath.getAbsolutePath());
+    String modelName = FileCommands.dropExtension(modelPath.getRelativePath());
     String transName = FileCommands.dropExtension(transformationPath.getRelativePath());
     String strat = "main-" + transName.replace('/', '_');
     Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules(), null);
@@ -228,6 +230,7 @@ public class ImportCommands {
 
     IStrategoTerm transformedTerm;
     try {
+      currentModelName = modelName;
       currentTransName = transName;
       transformedTerm = STRCommands.execute(strat, trans, modelTerm, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
@@ -235,6 +238,7 @@ public class ImportCommands {
 //      driver.setErrorMessage(toplevelDecl, msg);
       throw new StrategoException(msg, e);
     } finally {
+      modelName = null;
       currentTransName = null;
     }
     
@@ -247,6 +251,10 @@ public class ImportCommands {
   public String getCurrentTransName() {
     return currentTransName;
   }
+  public String getCurrentModelName() {
+    return currentModelName;
+  }
+
   
   private IStrategoTerm renameModel(IStrategoTerm transformedModel, RelativePath modelPath, RelativePath transformedModelPath, Path compiledTrans, IStrategoTerm toplevelDecl) {
     FromTo renaming = new FromTo(modelPath, transformedModelPath);
