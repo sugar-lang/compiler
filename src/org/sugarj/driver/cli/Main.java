@@ -63,8 +63,9 @@ public class Main {
       Log.log.log("", Log.ALWAYS);
       e.showUsage();
     }
-    
-    System.exit(0);
+    if (environment.isTerminateJVMAfterProcessing()) {
+      System.exit(0);
+    }
   }
   
   // without running eclipse platform,

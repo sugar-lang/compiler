@@ -39,6 +39,7 @@ import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.driver.Result;
 import org.sugarj.driver.STRCommands;
+import org.sugarj.transformations.analysis.AnalysisDataInterop;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
@@ -108,7 +109,12 @@ public class DriverCLI {
       log.log("error: line " + error.lineStart + " column " + error.columnStart + " to line " + error.lineEnd + " column " + error.columEnd + ":\n  " + error.msg, Log.ALWAYS);
 
     
-    IStrategoTerm errorTree = STRCommands.assimilate("sugarj-analyze", res.getDesugaringsFile(), tuple, new HybridInterpreter());
+    
+    HybridInterpreter interpreter = new HybridInterpreter();
+    new AnalysisDataInterop().createInteropRegisterer().register(interpreter.getContext(), interpreter.getCompiledContext());
+    
+    
+    IStrategoTerm errorTree = STRCommands.assimilate("sugarj-analyze", res.getDesugaringsFile(), tuple, interpreter);
     
     assert errorTree.getTermType() == IStrategoTerm.TUPLE && errorTree.getSubtermCount() == 4 :
       "error in sugarj-analyze, did not return tuple with 4 elements";
@@ -222,7 +228,7 @@ public class DriverCLI {
       IStrategoTerm ambStart;
       
       public void preVisit(IStrategoTerm term) {
-        if (ambStart == null && Environment.getTermFactory().makeConstructor("amb", 1) == tryGetConstructor(term)) {
+        if (ambStart == null && ATermCommands.factory.makeConstructor("amb", 1) == tryGetConstructor(term)) {
           reportAmbiguity(term, errors);
           ambStart = term;
         }
@@ -436,6 +442,9 @@ public class DriverCLI {
     if (line.hasOption("no-checking"))
       environment.setNoChecking(true);
     
+    if (line.hasOption("dontTerminateJVM"))
+      environment.setTerminateJVMAfterProcessing(false);
+    
     if (line.hasOption("language")) {
       String[] langNames = line.getOptionValues("language");
       activateBaseLanguage(langNames);
@@ -563,6 +572,12 @@ public class DriverCLI {
         "language",
         true,
         "Specify a base language to activate.");
+    
+    options.addOption(
+        null, 
+        "dontTerminateJVM", 
+        false, 
+        "Forces SugjarJ not to terminate the JVM after procesing.");
     
     return options;
   }
