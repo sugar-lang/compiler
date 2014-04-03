@@ -58,10 +58,16 @@ public class Main {
       
     } catch (Exception e) {
       e.printStackTrace();
+      if (environment.isTerminateJVMAfterProcessing()) {
+        System.exit(1);
+      }
     } catch (CLIError e) {
       Log.log.log(e.getMessage(), Log.ALWAYS);
       Log.log.log("", Log.ALWAYS);
       e.showUsage();
+      if (environment.isTerminateJVMAfterProcessing()) {
+        System.exit(1);
+      }
     }
     if (environment.isTerminateJVMAfterProcessing()) {
       System.exit(0);
