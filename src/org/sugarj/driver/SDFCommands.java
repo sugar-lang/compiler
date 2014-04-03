@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -37,7 +38,6 @@ import org.strategoxt.stratego_gpp.box2text_string_0_1;
 import org.strategoxt.stratego_sdf.pp_sdf_box_0_0;
 import org.strategoxt.strc.pp_stratego_string_0_0;
 import org.strategoxt.tools.main_pack_sdf_0_0;
-import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
@@ -77,18 +77,27 @@ public class SDFCommands {
     } catch (Exception e) {
     }
   }
+    
+  private final SGLR sdfParser;
+  private final ModuleKeyCache<Path> sdfCache;
+  private final Environment environment;
+
+  public SDFCommands(SGLR sdfParser, ModuleKeyCache<Path> sdfCache, Environment environment) {
+    this.sdfParser = sdfParser;
+    this.sdfCache = sdfCache;
+    this.environment = environment;
+  }
   
   private static IOAgent packSdfIOAgent = new FilteringIOAgent(Log.PARSE | Log.DETAIL, "  including .*");
   private static IOAgent sdf2tableIOAgent = new FilteringIOAgent(Log.PARSE | Log.DETAIL, "Invoking native tool .*");
   private static IOAgent makePermissiveIOAgent = new FilteringIOAgent(Log.PARSE | Log.DETAIL, "[ make_permissive | info ].*");
   
-  private static void packSdf(
+  private void packSdf(
       Path sdf, 
       Path def, 
       Collection<Path> paths, 
-      ModuleKeyCache<Path> sdfCache, 
-      Environment environment, 
-      AbstractBaseLanguage baseLang) throws IOException {
+      List<Path> baseLanguageGrammars,
+      Path baseLanguageDir) throws IOException {
     /*
      * We can include as many paths as we want here, checking the
      * adequacy of the occurring imports is done elsewhere.
@@ -98,7 +107,7 @@ public class SDFCommands {
         "-o", FileCommands.nativePath(def.getAbsolutePath())
     }));
     
-    for (Path grammarFile : baseLang.getPackagedGrammars()) {
+    for (Path grammarFile : baseLanguageGrammars) {
       Map<String, Integer> map = new HashMap<String, Integer>();
       map.put(grammarFile.getAbsolutePath(), FileCommands.fileHash(grammarFile));
       ModuleKey key = new ModuleKey(map, ""); 
@@ -114,7 +123,7 @@ public class SDFCommands {
     }
     
     cmd.add("-I");
-    cmd.add(FileCommands.nativePath(baseLang.getPluginDirectory().getAbsolutePath()));
+    cmd.add(FileCommands.nativePath(baseLanguageDir.getAbsolutePath()));
     cmd.add("-I");
     cmd.add(FileCommands.nativePath(StdLib.stdLibDir.getAbsolutePath()));
     
@@ -183,9 +192,9 @@ public class SDFCommands {
     FileCommands.deleteTempFiles(tbl);
   }
   
-  public static void check(Path sdf, String module, Collection<Path> paths, ModuleKeyCache<Path> sdfCache, Environment environment, AbstractBaseLanguage baseLang) throws IOException {
+  public void check(Path sdf, String module, Collection<Path> paths, List<Path> baseLanguageGrammars, Path baseLanguageDir) throws IOException {
     Path def = FileCommands.newTempFile("def");
-    packSdf(sdf, def, paths, sdfCache, environment, baseLang);
+    packSdf(sdf, def, paths, baseLanguageGrammars, baseLanguageDir);
     normalizeTable(def, module);
     FileCommands.deleteTempFiles(def);
   }
@@ -198,20 +207,18 @@ public class SDFCommands {
    * @throws SGLRException 
    * @throws TokenExpectedException 
    */
-  public static Path compile(Path sdf,
+  public Path compile(Path sdf,
                               String module, 
-                              Map<Path, Integer> dependentFiles, 
-                              SGLR sdfParser, 
-                              ModuleKeyCache<Path> sdfCache, 
-                              Environment environment,
-                              AbstractBaseLanguage baseLang) throws IOException,
+                              Set<Path> dependentFiles, 
+                              List<Path> baseLanguageGrammars,
+                              Path baseLanguageDir) throws IOException,
                                                           InvalidParseTableException, 
                                                           TokenExpectedException, 
                                                           SGLRException {
-    ModuleKey key = getModuleKeyForGrammar(sdf, module, dependentFiles, sdfParser);
+    ModuleKey key = getModuleKeyForGrammar(sdf, module, dependentFiles);
     Path tbl = lookupGrammarInCache(sdfCache, key);
     if (tbl == null) {
-      tbl = generateParseTable(key, sdf, module, environment.getIncludePath(), sdfCache, environment, baseLang);
+      tbl = generateParseTable(key, sdf, module, environment.getIncludePath(), baseLanguageGrammars, baseLanguageDir);
       tbl = cacheParseTable(sdfCache, key, tbl, environment);
     }
     
@@ -264,30 +271,29 @@ public class SDFCommands {
     }
   }
   
-  private static ModuleKey getModuleKeyForGrammar(Path sdf, String module, Map<Path, Integer> dependentFiles, SGLR parser) throws IOException, InvalidParseTableException, TokenExpectedException, SGLRException {
+  private ModuleKey getModuleKeyForGrammar(Path sdf, String module, Set<Path> dependentFiles) throws IOException, InvalidParseTableException, TokenExpectedException, SGLRException {
     log.beginTask("Generating", "Generate module key for current grammar", Log.CACHING);
     try {
-      IStrategoTerm aterm = (IStrategoTerm) parser.parse(FileCommands.readFileAsString(sdf), sdf.getAbsolutePath(), "Sdf2Module");
+      IStrategoTerm aterm = (IStrategoTerm) sdfParser.parse(FileCommands.readFileAsString(sdf), sdf.getAbsolutePath(), "Sdf2Module");
 
       IStrategoTerm imports = ATermCommands.getApplicationSubterm(aterm, "module", 1);
       IStrategoTerm body = ATermCommands.getApplicationSubterm(aterm, "module", 2);
       IStrategoTerm term = ATermCommands.makeTuple(imports, body);
 
-      return new ModuleKey(dependentFiles, SDF_FILE_PATTERN, term);
+      return new ModuleKey(environment.getStamper(), dependentFiles, environment.getRoot(), SDF_FILE_PATTERN, term);
     } catch (Exception e) {
-      throw new SGLRException(parser, "could not parse SDF file " + sdf, e);
+      throw new SGLRException(sdfParser, "could not parse SDF file " + sdf, e);
     } finally {
       log.endTask();
     }
   }
 
-  private static Path generateParseTable(ModuleKey key,
+  private Path generateParseTable(ModuleKey key,
                                          Path sdf,
                                          String module,
                                          Collection<Path> paths,
-                                         ModuleKeyCache<Path> sdfCache,
-                                         Environment environment,
-                                         AbstractBaseLanguage baseLang)
+                                         List<Path> baseLanguageGrammars,
+                                         Path baseLanguageDir)
       throws IOException, InvalidParseTableException {
     log.beginTask("Generating", "Generate the parse table", Log.PARSE);
     try {
@@ -296,7 +302,7 @@ public class SDFCommands {
       tblFile = FileCommands.newTempFile("tbl");
 
       Path def = FileCommands.newTempFile("def");
-      packSdf(sdf, def, paths, sdfCache, environment, baseLang);
+      packSdf(sdf, def, paths, baseLanguageGrammars, baseLanguageDir);
       sdf2Table(def, tblFile, module);
       FileCommands.deleteTempFiles(def);
       return tblFile;
@@ -355,7 +361,7 @@ public class SDFCommands {
    * @throws SGLRException 
    * @throws TokenExpectedException 
    */
-  private static Pair<SGLR, Pair<IStrategoTerm, Integer>> sglr(ParseTable table, final String source, final Path sourceFile, final String start, boolean useRecovery, final boolean parseMax, ITreeBuilder treeBuilder) throws SGLRException {
+  private static Pair<SGLR, Pair<IStrategoTerm, Integer>> sglr(ParseTable table, final String source, final String sourceDesc, final String start, boolean useRecovery, final boolean parseMax, ITreeBuilder treeBuilder) throws SGLRException {
     if (treeBuilder instanceof RetractableTreeBuilder && ((RetractableTreeBuilder) treeBuilder).isInitialized())
       ((RetractableTokenizer) treeBuilder.getTokenizer()).setKeywordRecognizer(table.getKeywordRecognizer());
     
@@ -365,7 +371,7 @@ public class SDFCommands {
     Callable<Pair<IStrategoTerm, Integer>> parseCallable = new Callable<Pair<IStrategoTerm, Integer>>() {
       @Override
       public Pair<IStrategoTerm, Integer> call() throws Exception {
-        Object o = parser.parseMax(source, sourceFile.getAbsolutePath(), start);
+        Object o = parser.parseMax(source, sourceDesc, start);
         if (o instanceof IStrategoTerm)
           return Pair.create((IStrategoTerm) o, source.length());
         else {
@@ -390,16 +396,16 @@ public class SDFCommands {
     }
   }
   
-  public static Pair<SGLR, Pair<IStrategoTerm, Integer>> parseImplode(ParseTable table, String source, Path sourceFile, String start, boolean useRecovery, boolean parseMax, ITreeBuilder treeBuilder) throws IOException, SGLRException {
-    return parseImplode(table, null, source, sourceFile, start, useRecovery, parseMax, treeBuilder);
+  public static Pair<SGLR, Pair<IStrategoTerm, Integer>> parseImplode(ParseTable table, String source, String sourceDesc, String start, boolean useRecovery, boolean parseMax, ITreeBuilder treeBuilder) throws IOException, SGLRException {
+    return parseImplode(table, null, source, sourceDesc, start, useRecovery, parseMax, treeBuilder);
   }
   
-  private static Pair<SGLR, Pair<IStrategoTerm, Integer>> parseImplode(ParseTable table, Path tbl, String source, Path sourceFile, String start, boolean useRecovery, boolean parseMax, ITreeBuilder treeBuilder) throws IOException, SGLRException {
+  private static Pair<SGLR, Pair<IStrategoTerm, Integer>> parseImplode(ParseTable table, Path tbl, String source, String sourceDesc, String start, boolean useRecovery, boolean parseMax, ITreeBuilder treeBuilder) throws IOException, SGLRException {
     log.beginExecution("parsing", Log.PARSE);
 
     Pair<SGLR, Pair<IStrategoTerm, Integer>> result = null;
     try {
-      result = sglr(table, source, sourceFile, start, useRecovery, parseMax, treeBuilder);
+      result = sglr(table, source, sourceDesc, start, useRecovery, parseMax, treeBuilder);
     }
     finally {
       if (result != null && result.b != null)
