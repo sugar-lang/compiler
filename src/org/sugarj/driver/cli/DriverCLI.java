@@ -222,7 +222,7 @@ public class DriverCLI {
       IStrategoTerm ambStart;
       
       public void preVisit(IStrategoTerm term) {
-        if (ambStart == null && Environment.getTermFactory().makeConstructor("amb", 1) == tryGetConstructor(term)) {
+        if (ambStart == null && ATermCommands.factory.makeConstructor("amb", 1) == tryGetConstructor(term)) {
           reportAmbiguity(term, errors);
           ambStart = term;
         }

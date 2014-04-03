@@ -63,9 +63,16 @@ public class ImportCommands {
       IStrategoTerm transformation = ATermCommands.getApplicationSubterm(term, "TransApp", 0);
       
       Pair<RelativePath, Boolean> resolvedModel = resolveModule(model, true);
-      Pair<RelativePath, Boolean> resolvedTransformation = resolveModule(transformation, false);
-      if (resolvedModel == null || resolvedTransformation == null)
+      if (resolvedModel == null) {
+        driver.setErrorMessage(model, "model not found: " + model.toString());
         return null;
+      }
+      
+      Pair<RelativePath, Boolean> resolvedTransformation = resolveModule(transformation, false);
+      if (resolvedTransformation == null) {
+        driver.setErrorMessage(transformation, "transformation not found: " + transformation.toString());
+        return null;
+      }
       
       Pair<String, Boolean> transformedModel = transformModel(resolvedModel.a, resolvedTransformation.a, term);
       
