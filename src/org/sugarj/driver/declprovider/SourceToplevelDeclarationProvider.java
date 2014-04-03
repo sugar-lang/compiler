@@ -30,15 +30,15 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   private Driver driver;
   private String lastRemainingInput;
   private String remainingInput;
-  private final int hash;
   private RetractableTreeBuilder treeBuilder;
 
-  public SourceToplevelDeclarationProvider(Driver driver, String source) {
-    this.driver = driver;
+  public SourceToplevelDeclarationProvider(String source, Path sourceFile) {
     this.remainingInput = source;
     this.treeBuilder = new RetractableTreeBuilder();
-    hash = source.hashCode();
-    // XXX need to load ANY parse table, preferably an empty one.
+  }
+  
+  public void setDriver(Driver driver) {
+    this.driver = driver;
   }
 
   @Override
@@ -144,11 +144,6 @@ public class SourceToplevelDeclarationProvider implements ToplevelDeclarationPro
   @Override
   public boolean hasNextToplevelDecl() {
     return !remainingInput.isEmpty();
-  }
-
-  @Override
-  public int getSourceHashCode() {
-    return hash;
   }
 
   @Override

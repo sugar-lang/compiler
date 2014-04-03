@@ -8,15 +8,19 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
+import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.util.Pair;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
@@ -134,7 +138,7 @@ public class ModuleSystemCommands {
   public static RelativePath locateSourceFileOrModel(String modulePath, List<Path> sourcePath, AbstractBaseProcessor baseProcessor, Environment environment) {
     RelativePath result = locateSourceFile(modulePath, baseProcessor.getLanguage().getSugarFileExtension(), sourcePath);
     if (result == null)
-      result = searchFile(modulePath, "model", environment, null);
+      result = searchFile(environment.createOutPath(modulePath + ".model"), null);
     if (result == null && baseProcessor.getLanguage().getBaseFileExtension() != null)
       result = locateSourceFile(modulePath, baseProcessor.getLanguage().getBaseFileExtension(), sourcePath);
     return result;
@@ -166,7 +170,7 @@ public class ModuleSystemCommands {
 
   private static RelativePath searchFile(RelativePath file, Result driverResult) {
     if (driverResult != null)
-      driverResult.addFileDependency(file);
+      driverResult.addExternalFileDependency(file);
     if (file.getFile().exists())
       return file;
     
@@ -199,11 +203,11 @@ public class ModuleSystemCommands {
       relativePath = relativePath.substring(base.getAbsolutePath().length() + sepOffset);
     }
     
-    RelativePath p = new RelativePath(base, relativePath + "." + extension);
-    if (driverResult != null)
-      driverResult.addFileDependency(p);
-    if (p.getFile().exists())
-      return p;
+    if (base.getFile().isDirectory()) {
+      RelativePath p = new RelativePath(base, relativePath + "." + extension);
+      if (searchFile(p, driverResult) != null)
+        return p;
+    }
     
     URLClassLoader cl = null;
     try {
@@ -223,17 +227,26 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateResult(String modulePath, Environment environment) {
-    Path dep = ModuleSystemCommands.searchFile(modulePath, "dep", environment, null);
-    Result res = null;
+  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Mode mode) throws IOException {
+    return locateResult(modulePath, env, mode, Collections.<RelativePath, Integer>emptyMap());
+  }
+  
+  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Mode mode, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+    RelativePath compileDep = new RelativePath(env.getCompileBin(), FileCommands.dropExtension(modulePath) + ".dep");
+    RelativePath editedDep = new RelativePath(env.getParseBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    if (dep != null)
-      try {
-        res = Result.readDependencyFile(dep);
-      } catch (IOException e) {
-        log.logErr("could not read dependency file " + dep, Log.DETAIL);
-      }
+    Pair<Result, Boolean> result = Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
+    if (result.a != null)
+      return result;
     
-    return res;
+    for (Path base : env.getIncludePath()) {
+      compileDep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
+      
+      result = Result.read(env.getStamper(), compileDep, null, editedSourceFiles, mode);
+      if (result.a != null)
+        return result;
+    }
+    
+    return Pair.create(null, false);
   }
 }
