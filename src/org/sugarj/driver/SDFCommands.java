@@ -258,10 +258,8 @@ public class SDFCommands {
     try {
       result = sdfCache.get(key);
       
-      if (result == null || !result.getFile().exists()) {
-        result = null;
+      if (result == null || !result.getFile().exists())
         return null;
-      }
 
       log.log("Cache location: '" + result + "'", Log.CACHING);
       

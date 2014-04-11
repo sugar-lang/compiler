@@ -21,7 +21,6 @@ import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.cleardep.mode.ForEditorMode;
 import org.sugarj.common.cleardep.mode.Mode;
-import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.util.Pair;
@@ -69,19 +68,23 @@ public class Result extends CompilationUnit {
     deferredSourceFiles = new HashMap<>();
   }
   
-  public void addExternalFileDependency(RelativePath file, int stampOfFile) {
+  @Override
+  public void addExternalFileDependency(Path file, int stampOfFile) {
     super.addExternalFileDependency(file, stampOfFile);
     getTransitivelyAffectedFileStamps().put(file, stampOfFile);
   }
   
+  @Override
   public void addGeneratedFile(Path file, int stampOfFile) {
     super.addGeneratedFile(file, stampOfFile);
     getTransitivelyAffectedFileStamps().put(file, stampOfFile);
   }
   
-  public void addModuleDependency(Result mod) throws IOException {
+  @Override
+  public void addModuleDependency(CompilationUnit mod) {
     super.addModuleDependency(mod);
-    getTransitivelyAffectedFileStamps().putAll(mod.getTransitivelyAffectedFileStamps());
+    if (mod instanceof Result)
+      getTransitivelyAffectedFileStamps().putAll(((Result) mod).getTransitivelyAffectedFileStamps());
   }
 
   private Map<Path, Integer> getTransitivelyAffectedFileStamps() {
