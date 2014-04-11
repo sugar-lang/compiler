@@ -79,10 +79,10 @@ public class Driver {
   private static List<ProcessingListener> processingListener = new LinkedList<ProcessingListener>();
 
   /**
-   * cache location -> base language -> cache
+   * cache location -> cache
    */
-  private static Map<Path, Map<String,ModuleKeyCache<Path>>> sdfCaches;
-  private static Map<Path, Map<String,ModuleKeyCache<Path>>> strCaches;
+  private static Map<Path, ModuleKeyCache<Path>> sdfCaches;
+  private static Map<Path, ModuleKeyCache<Path>> strCaches;
   
   private ModuleKeyCache<Path> sdfCache;
   private ModuleKeyCache<Path> strCache;
@@ -1329,21 +1329,21 @@ public class Driver {
     Path strCachePath = environment.createCachePath("strCaches");
     
     if (sdfCaches == null || force)
-      sdfCaches = new HashMap<Path, Map<String,ModuleKeyCache<Path>>>();
+      sdfCaches = new HashMap<Path, ModuleKeyCache<Path>>();
     if (strCaches == null || force)
-      strCaches = new HashMap<Path, Map<String, ModuleKeyCache<Path>>>();
+      strCaches = new HashMap<Path, ModuleKeyCache<Path>>();
     
     if (!sdfCaches.containsKey(environment.getCacheDir()) || force) {
       ObjectInputStream sdfIn = null;
       try {
         sdfIn = new ObjectInputStream(new FileInputStream(sdfCachePath.getFile()));
         if (!sdfCaches.containsKey(environment.getCacheDir())) {
-          Map<String, ModuleKeyCache<Path>> sdfLocalCaches = (Map<String, ModuleKeyCache<Path>>) sdfIn.readObject();
+          ModuleKeyCache<Path> sdfLocalCaches = (ModuleKeyCache<Path>) sdfIn.readObject();
           sdfCaches.put(environment.getCacheDir(), sdfLocalCaches);
         }
       } catch (Exception e) {
 //        e.printStackTrace();
-        sdfCaches.put(environment.getCacheDir(), new HashMap<String, ModuleKeyCache<Path>>());
+        sdfCaches.put(environment.getCacheDir(), new ModuleKeyCache<Path>(sdfCaches));
       } finally {
         if (sdfIn != null)
           sdfIn.close();
@@ -1355,12 +1355,12 @@ public class Driver {
       try {
         strIn = new ObjectInputStream(new FileInputStream(strCachePath.getFile()));
         if (!strCaches.containsKey(environment.getCacheDir())) {
-          Map<String, ModuleKeyCache<Path>> strLocalCaches = (Map<String, ModuleKeyCache<Path>>) strIn.readObject();
+          ModuleKeyCache<Path> strLocalCaches = (ModuleKeyCache<Path>) strIn.readObject();
           strCaches.put(environment.getCacheDir(), strLocalCaches);
         }
       } catch (Exception e) {
 //        e.printStackTrace();
-        strCaches.put(environment.getCacheDir(), new HashMap<String, ModuleKeyCache<Path>>());
+        strCaches.put(environment.getCacheDir(), new ModuleKeyCache<Path>(strCaches));
       } finally {
         if (strIn != null)
           strIn.close();
@@ -1368,11 +1368,11 @@ public class Driver {
     }
   }
 
-  private static ModuleKeyCache<Path> selectCache(Map<Path, Map<String, ModuleKeyCache<Path>>> caches, AbstractBaseLanguage baseLang, Environment environment) throws IOException {
+  private static ModuleKeyCache<Path> selectCache(Map<Path, ModuleKeyCache<Path>> caches, AbstractBaseLanguage baseLang, Environment environment) throws IOException {
     if (caches == null)
       return null;
     synchronized (caches) {
-      ModuleKeyCache<Path> cache = caches.get(environment.getCacheDir()).get(baseLang.getLanguageName());
+      ModuleKeyCache<Path> cache = caches.get(environment.getCacheDir());
       Path versionPath = environment.createCachePath(baseLang.getLanguageName() + ".version");
       if (cache != null &&
           (!FileCommands.exists(versionPath) || !baseLang.getVersion().equals(FileCommands.readFileAsString(versionPath))))
@@ -1380,7 +1380,7 @@ public class Driver {
       if (cache == null) {
         cache = new ModuleKeyCache<Path>(caches);
         FileCommands.writeToFile(versionPath, baseLang.getVersion());
-        caches.get(environment.getCacheDir()).put(baseLang.getLanguageName(), cache);
+        caches.put(environment.getCacheDir(), cache);
       }
       return cache;
     }
