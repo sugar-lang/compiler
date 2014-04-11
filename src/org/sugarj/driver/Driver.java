@@ -399,15 +399,12 @@ public class Driver {
       params.renamings.clear();
       params.renamings.addAll(originalRenamings);
 
-      if (!interrupt)
+      if (!interrupt) {
         driverResult.write();
-      
-      if (interrupt) {
+        driverResult.setFailed(!success);
+      } else {
         driverResult.setFailed(false);
         driverResult.setSugaredSyntaxTree(null);
-      }
-      else {
-        driverResult.setFailed(!success);
       }
     }
   }
