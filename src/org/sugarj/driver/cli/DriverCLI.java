@@ -131,51 +131,40 @@ public class DriverCLI {
     IStrategoList warnings = Tools.termAt(errorTree, 2);
     IStrategoList notes = Tools.termAt(errorTree, 3);
     
-    success &= semErrors.isEmpty() && warnings.isEmpty() && notes.isEmpty();
     
-    for (IStrategoTerm error : semErrors.getAllSubterms()) {
-      if (error.getTermType() == IStrategoTerm.LIST) {
-        for (IStrategoTerm deepError : error.getAllSubterms()) {
-          reportCLI(deepError, "error");
-        }
-      } else {
-        reportCLI(error, "error");
-      }
-    }
-  
-    for (IStrategoTerm warning : warnings.getAllSubterms()) {
-      if (warning.getTermType() == IStrategoTerm.LIST) {
-        for (IStrategoTerm deepWarning : warning.getAllSubterms()) {
-          reportCLI(deepWarning, "warning");
-        }
-      } else {
-        reportCLI(warning, "warning");
-      }
-    }
+    boolean hasErrors = !processAnalysisResults(semErrors, "error");
+    boolean hasWarnings = !processAnalysisResults(warnings, "warning");
+    boolean hasNotes = !processAnalysisResults(notes, "notes");
     
-    for (IStrategoTerm note : notes.getAllSubterms()) {
-      if (note.getTermType() == IStrategoTerm.LIST) {
-        for (IStrategoTerm deepNote : note.getAllSubterms()) {
-          reportCLI(deepNote, "note");
-        }
-      } else {
-        reportCLI(note, "note");
-      }
-    }
-    
-    
-    if (! semErrors.isEmpty()) {
+    if (hasErrors) {
       return CLI_ExitValue.DSL_ANALYSIS_ERROR;
     }
-    if (! warnings.isEmpty()) {
+    if (hasWarnings) {
       return CLI_ExitValue.DSL_ANALYSIS_WARNING;
     }
-    if (! notes.isEmpty()) {
+    if (hasNotes) {
       return CLI_ExitValue.DSL_ANALYSIS_NOTE;
     }
     
-    
-    return CLI_ExitValue.SUCCESS;
+    if (success) {
+      return CLI_ExitValue.SUCCESS;
+    }
+    return CLI_ExitValue.FAILURE;
+  }
+  
+  private static boolean processAnalysisResults(IStrategoList errors, String type) throws IOException {
+    for (IStrategoTerm note : errors.getAllSubterms()) {
+      if (note.getTermType() == IStrategoTerm.LIST) {
+        for (IStrategoTerm deepNote : note.getAllSubterms()) {
+          reportCLI(deepNote, type);
+          return false;
+        }
+      } else {
+        reportCLI(note, type);
+        return false;
+      }
+    }
+    return true;
   }
   
   private static void reportCLI(IStrategoTerm pairOrList, String kind) throws IOException {
@@ -193,9 +182,9 @@ public class DriverCLI {
       right = left;
     
     if (left == null || right == null)
-      log.log("error: " + msg + "\n  in tree " + ATermCommands.atermToFile(term), Log.ALWAYS);
+      log.log(kind + ": " + msg + "\n  in tree " + ATermCommands.atermToFile(term), Log.ALWAYS);
     else
-      log.log("error: line " + left.getLine() + " column " + left.getColumn() + " to line " + right.getLine() + " column " + right.getColumn() + ":\n  " + msg, Log.ALWAYS);
+      log.log(kind + ": line " + left.getLine() + " column " + left.getColumn() + " to line " + right.getLine() + " column " + right.getColumn() + ":\n  " + msg, Log.ALWAYS);
   }
   
   
