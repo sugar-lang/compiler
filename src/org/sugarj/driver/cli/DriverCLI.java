@@ -78,10 +78,14 @@ public class DriverCLI {
     }
   }
   
-  public static boolean processResultCLI(Result res, Path file, String project) throws IOException {
+  public static enum CLI_ExitValue {
+    SUCCESS, COMPILATION_ERROR, DSL_ANALYSIS_ERROR, DSL_ANALYSIS_WARNING, DSL_ANALYSIS_NOTE, FAILURE;
+  }
+  
+  public static CLI_ExitValue processResultCLI(Result res, Path file, String project) throws IOException {
     if (res == null) {
       log.log("compilation failed", Log.ALWAYS);
-      return false;
+      return CLI_ExitValue.COMPILATION_ERROR;
     }
     
     boolean success = res.getCollectedErrors().isEmpty();
@@ -91,8 +95,13 @@ public class DriverCLI {
     for (BadTokenException e : res.getParseErrors())
       log.log("syntax error: line " + e.getLineNumber() + " column " + e.getColumnNumber() + ": " + e.getMessage(), Log.ALWAYS);
     
-    if (res.getSugaredSyntaxTree() == null)
-      return success;
+    if (res.getSugaredSyntaxTree() == null) {
+      if (success) {
+        return CLI_ExitValue.SUCCESS;
+      } else {
+        return CLI_ExitValue.FAILURE;
+      }
+    }
     
     IToken tok = ImploderAttachment.getRightToken(res.getSugaredSyntaxTree());
     
@@ -124,28 +133,49 @@ public class DriverCLI {
     
     success &= semErrors.isEmpty() && warnings.isEmpty() && notes.isEmpty();
     
-    for (IStrategoTerm error : semErrors.getAllSubterms())
-      if (error.getTermType() == IStrategoTerm.LIST)
-        for (IStrategoTerm deepError : error.getAllSubterms())
+    for (IStrategoTerm error : semErrors.getAllSubterms()) {
+      if (error.getTermType() == IStrategoTerm.LIST) {
+        for (IStrategoTerm deepError : error.getAllSubterms()) {
           reportCLI(deepError, "error");
-      else
+        }
+      } else {
         reportCLI(error, "error");
-    for (IStrategoTerm warning : warnings.getAllSubterms())
-      if (warning.getTermType() == IStrategoTerm.LIST)
-        for (IStrategoTerm deepWarning : warning.getAllSubterms())
+      }
+    }
+  
+    for (IStrategoTerm warning : warnings.getAllSubterms()) {
+      if (warning.getTermType() == IStrategoTerm.LIST) {
+        for (IStrategoTerm deepWarning : warning.getAllSubterms()) {
           reportCLI(deepWarning, "warning");
-      else
+        }
+      } else {
         reportCLI(warning, "warning");
-    for (IStrategoTerm note : notes.getAllSubterms())
-      if (note.getTermType() == IStrategoTerm.LIST)
-        for (IStrategoTerm deepNote : note.getAllSubterms())
+      }
+    }
+    
+    for (IStrategoTerm note : notes.getAllSubterms()) {
+      if (note.getTermType() == IStrategoTerm.LIST) {
+        for (IStrategoTerm deepNote : note.getAllSubterms()) {
           reportCLI(deepNote, "note");
-      else
+        }
+      } else {
         reportCLI(note, "note");
+      }
+    }
     
-    // System.out.println(ATermCommands.atermToFile(errorTree));
     
-    return success;
+    if (! semErrors.isEmpty()) {
+      return CLI_ExitValue.DSL_ANALYSIS_ERROR;
+    }
+    if (! warnings.isEmpty()) {
+      return CLI_ExitValue.DSL_ANALYSIS_WARNING;
+    }
+    if (! notes.isEmpty()) {
+      return CLI_ExitValue.DSL_ANALYSIS_NOTE;
+    }
+    
+    
+    return CLI_ExitValue.SUCCESS;
   }
   
   private static void reportCLI(IStrategoTerm pairOrList, String kind) throws IOException {
