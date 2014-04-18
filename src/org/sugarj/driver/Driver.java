@@ -610,7 +610,7 @@ public class Driver {
   
     log.beginTask("analyze", "ANALYZE toplevel declaration.", Log.CORE);
     try {
-      currentTransProg = str.compile(currentTransSTR, "main", driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
     
       return STRCommands.execute("analyze-main", currentTransProg, term, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
@@ -630,7 +630,7 @@ public class Driver {
 
     log.beginTask("desugaring", "DESUGAR toplevel declaration.", Log.CORE);
     try {
-      currentTransProg = str.compile(currentTransSTR, "main", driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
 
       return STRCommands.execute("internal-main", currentTransProg, term, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
@@ -1275,7 +1275,7 @@ public class Driver {
     log.beginTask("checking transformation", "CHECK current transformation", Log.CORE);
     
     try {
-      currentTransProg = str.compile(currentTransSTR, "main", driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
     } catch (StrategoException e) {
       String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
       log.logErr(msg, Log.DETAIL);

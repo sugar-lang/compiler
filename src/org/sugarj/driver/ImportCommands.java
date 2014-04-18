@@ -227,7 +227,7 @@ public class ImportCommands {
     if (transformationResult.a == null)
       throw new IllegalStateException("Could not find compiled transformation.");
     
-    Path trans = str.compile(transformationPath, strat, transformationResult.a.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
+    Path trans = str.compile(transformationPath, transformationResult.a.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
     
 //    IStrategoTerm transformationInput = 
 //        ATermCommands.makeTuple(

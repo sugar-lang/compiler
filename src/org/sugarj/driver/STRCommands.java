@@ -81,7 +81,7 @@ public class STRCommands {
   /**
    *  Compiles a {@code *.str} file to a single {@code *.java} file. 
    */
-  private static void strj(boolean normalize, Path str, Path out, String main, Collection<Path> paths, Path baseLanguageDir) throws IOException {
+  private static void strj(boolean normalize, Path str, Path out, Collection<Path> paths, Path baseLanguageDir) throws IOException {
     
     /*
      * We can include as many paths as we want here, checking the
@@ -90,7 +90,7 @@ public class STRCommands {
     List<String> cmd = new ArrayList<String>(Arrays.asList(new String[] {
         "-i", toWindowsPath(str.getAbsolutePath()),
         "-o", toWindowsPath(out.getAbsolutePath()),
-        "-m", main,
+//        "-m", main,
         "-p", "sugarj",
         "--library",
         "-O", "0",
@@ -131,20 +131,19 @@ public class STRCommands {
   
   
   public Path compile(Path str,
-                              String main,
                               Set<Path> dependentFiles,
                               Path baseLanguageDir) throws IOException,
                                                           InvalidParseTableException,
                                                           TokenExpectedException,
                                                           BadTokenException,
                                                           SGLRException {
-    ModuleKey key = getModuleKeyForAssimilation(str, main, dependentFiles);
+    ModuleKey key = getModuleKeyForAssimilation(str, dependentFiles);
     Path prog = lookupAssimilationInCache(strCache, key);
     StrategoException error = null;
     
     if (prog == null) {
       try {
-        prog = generateAssimilator(key, str, main, environment.getIncludePath(), baseLanguageDir);
+        prog = generateAssimilator(key, str, environment.getIncludePath(), baseLanguageDir);
       } catch (StrategoException e) {
         prog = FAILED_COMPILATION_PATH;
         error = e;
@@ -162,7 +161,6 @@ public class STRCommands {
     
   private static Path generateAssimilator(ModuleKey key,
                                           Path str,
-                                          String main,
                                           List<Path> paths,
                                           Path baseLanguageDir) throws IOException {
     boolean success = false;
@@ -170,7 +168,7 @@ public class STRCommands {
     try {
       Path prog = FileCommands.newTempFile("ctree");
       log.log("calling STRJ", Log.TRANSFORM);
-      strj(true, str, prog, main, paths, baseLanguageDir);
+      strj(true, str, prog, paths, baseLanguageDir);
       success = FileCommands.exists(prog);
       return prog;
     } finally {
@@ -223,7 +221,7 @@ public class STRCommands {
   }
 
 
-  private ModuleKey getModuleKeyForAssimilation(Path str, String main, Set<Path> dependentFiles) throws IOException, InvalidParseTableException, TokenExpectedException, BadTokenException, SGLRException {
+  private ModuleKey getModuleKeyForAssimilation(Path str, Set<Path> dependentFiles) throws IOException, InvalidParseTableException, TokenExpectedException, BadTokenException, SGLRException {
     log.beginTask("Generating", "Generate module key for current assimilation", Log.CACHING);
     try {
       IStrategoTerm aterm = (IStrategoTerm) strParser.parse(FileCommands.readFileAsString(str), str.getAbsolutePath(), "StrategoModule");
@@ -248,7 +246,7 @@ public class STRCommands {
       interp.load(ctree.getAbsolutePath());
       interp.init();
     } catch (InterpreterException e) {
-      throw new StrategoException("desugaring failed: " + (e.getCause() == null ? e : e.getCause()).getMessage(), e);
+      throw new StrategoException("Transformation failed: " + (e.getCause() == null ? e : e.getCause()).getMessage(), e);
     }
     
     if (targs.length != 0 && !strategyName.contains("_"))
@@ -291,10 +289,10 @@ public class STRCommands {
         throw new RuntimeException("hybrid interpreter failed");
     }
     catch (InterpreterException e) {
-      throw new StrategoException("desugaring failed: " + (e.getCause() == null ? e : e.getCause()).getMessage(), e);
+      throw new StrategoException("Transformation failed: " + (e.getCause() == null ? e : e.getCause()).getMessage(), e);
     }
     catch (Exception e) {
-      throw new StrategoException("desugaring failed", e);
+      throw new StrategoException("Transformation failed", e);
     }
   }
   
