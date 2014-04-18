@@ -712,9 +712,11 @@ public class Driver {
         return ;
       
       IStrategoTerm reconstructedImport = baseProcessor.reconstructImport(importResult.a);
-      if (desugaredBodyDecls.remove(toplevelDecl))
-        desugaredBodyDecls.add(reconstructedImport);
-      toplevelDecl = reconstructedImport;
+      if (reconstructedImport != null) {
+        if (desugaredBodyDecls.remove(toplevelDecl))
+          desugaredBodyDecls.add(reconstructedImport);
+        toplevelDecl = reconstructedImport;
+      }
 
       String modulePath = importResult.a;
       boolean isCircularImport = importResult.b;
