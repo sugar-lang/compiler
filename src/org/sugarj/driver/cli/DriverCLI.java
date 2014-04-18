@@ -78,10 +78,14 @@ public class DriverCLI {
     }
   }
   
-  public static boolean processResultCLI(Result res, Path file, String project) throws IOException {
+  public static enum CLI_ExitValue {
+    SUCCESS, COMPILATION_ERROR, DSL_ANALYSIS_ERROR, DSL_ANALYSIS_WARNING, DSL_ANALYSIS_NOTE, FAILURE;
+  }
+  
+  public static CLI_ExitValue processResultCLI(Result res, Path file, String project) throws IOException {
     if (res == null) {
       log.log("compilation failed", Log.ALWAYS);
-      return false;
+      return CLI_ExitValue.COMPILATION_ERROR;
     }
     
     boolean success = res.getCollectedErrors().isEmpty();
@@ -91,8 +95,13 @@ public class DriverCLI {
     for (BadTokenException e : res.getParseErrors())
       log.log("syntax error: line " + e.getLineNumber() + " column " + e.getColumnNumber() + ": " + e.getMessage(), Log.ALWAYS);
     
-    if (res.getSugaredSyntaxTree() == null)
-      return success;
+    if (res.getSugaredSyntaxTree() == null) {
+      if (success) {
+        return CLI_ExitValue.SUCCESS;
+      } else {
+        return CLI_ExitValue.FAILURE;
+      }
+    }
     
     IToken tok = ImploderAttachment.getRightToken(res.getSugaredSyntaxTree());
     
@@ -122,30 +131,40 @@ public class DriverCLI {
     IStrategoList warnings = Tools.termAt(errorTree, 2);
     IStrategoList notes = Tools.termAt(errorTree, 3);
     
-    success &= semErrors.isEmpty() && warnings.isEmpty() && notes.isEmpty();
     
-    for (IStrategoTerm error : semErrors.getAllSubterms())
-      if (error.getTermType() == IStrategoTerm.LIST)
-        for (IStrategoTerm deepError : error.getAllSubterms())
-          reportCLI(deepError, "error");
-      else
-        reportCLI(error, "error");
-    for (IStrategoTerm warning : warnings.getAllSubterms())
-      if (warning.getTermType() == IStrategoTerm.LIST)
-        for (IStrategoTerm deepWarning : warning.getAllSubterms())
-          reportCLI(deepWarning, "warning");
-      else
-        reportCLI(warning, "warning");
-    for (IStrategoTerm note : notes.getAllSubterms())
-      if (note.getTermType() == IStrategoTerm.LIST)
-        for (IStrategoTerm deepNote : note.getAllSubterms())
-          reportCLI(deepNote, "note");
-      else
-        reportCLI(note, "note");
+    boolean hasErrors = !processAnalysisResults(semErrors, "error");
+    boolean hasWarnings = !processAnalysisResults(warnings, "warning");
+    boolean hasNotes = !processAnalysisResults(notes, "notes");
     
-    // System.out.println(ATermCommands.atermToFile(errorTree));
+    if (hasErrors) {
+      return CLI_ExitValue.DSL_ANALYSIS_ERROR;
+    }
+    if (hasWarnings) {
+      return CLI_ExitValue.DSL_ANALYSIS_WARNING;
+    }
+    if (hasNotes) {
+      return CLI_ExitValue.DSL_ANALYSIS_NOTE;
+    }
     
-    return success;
+    if (success) {
+      return CLI_ExitValue.SUCCESS;
+    }
+    return CLI_ExitValue.FAILURE;
+  }
+  
+  private static boolean processAnalysisResults(IStrategoList errors, String type) throws IOException {
+    for (IStrategoTerm note : errors.getAllSubterms()) {
+      if (note.getTermType() == IStrategoTerm.LIST) {
+        for (IStrategoTerm deepNote : note.getAllSubterms()) {
+          reportCLI(deepNote, type);
+          return false;
+        }
+      } else {
+        reportCLI(note, type);
+        return false;
+      }
+    }
+    return true;
   }
   
   private static void reportCLI(IStrategoTerm pairOrList, String kind) throws IOException {
@@ -163,9 +182,9 @@ public class DriverCLI {
       right = left;
     
     if (left == null || right == null)
-      log.log("error: " + msg + "\n  in tree " + ATermCommands.atermToFile(term), Log.ALWAYS);
+      log.log(kind + ": " + msg + "\n  in tree " + ATermCommands.atermToFile(term), Log.ALWAYS);
     else
-      log.log("error: line " + left.getLine() + " column " + left.getColumn() + " to line " + right.getLine() + " column " + right.getColumn() + ":\n  " + msg, Log.ALWAYS);
+      log.log(kind + ": line " + left.getLine() + " column " + left.getColumn() + " to line " + right.getLine() + " column " + right.getColumn() + ":\n  " + msg, Log.ALWAYS);
   }
   
   

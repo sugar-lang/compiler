@@ -24,6 +24,12 @@ import org.sugarj.stdlib.StdLib;
  * @author seba
  */
 public class Main {
+  
+  private static void exit(int i, Environment e) {
+    if (e.isTerminateJVMAfterProcessing()) {
+      System.exit(i);
+    }
+  }
 
   public static void main(String[] args) throws Throwable {
 
@@ -54,26 +60,34 @@ public class Main {
         
         Result res = Driver.run(DriverParameters.create(environment, lang, sourceFile, monitor));
     
-        if (!DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath()))
-          throw new RuntimeException("compilation of " + sourceFile + " failed");
+        DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath());
+        switch (returnValue) {
+        case SUCCESS:
+          exit (0, environment);
+        case COMPILATION_ERROR:
+          exit (1, environment);
+        case DSL_ANALYSIS_ERROR:
+          exit (2, environment);
+        case DSL_ANALYSIS_WARNING:
+          exit (3, environment);
+        case DSL_ANALYSIS_NOTE:
+          exit (4, environment);
+        case FAILURE: 
+        default:
+          exit (100, environment);
+        }
       }
       
     } catch (Exception e) {
       e.printStackTrace();
-      if (environment.isTerminateJVMAfterProcessing()) {
-        System.exit(1);
-      }
+      exit(100, environment);
     } catch (CLIError e) {
       Log.log.log(e.getMessage(), Log.ALWAYS);
       Log.log.log("", Log.ALWAYS);
       e.showUsage();
-      if (environment.isTerminateJVMAfterProcessing()) {
-        System.exit(1);
-      }
+      exit(1, environment);
     }
-    if (environment.isTerminateJVMAfterProcessing()) {
-      System.exit(0);
-    }
+    exit(0, environment);
   }
   
   // without running eclipse platform,
