@@ -199,6 +199,10 @@ public class Result extends CompilationUnit {
   }
   
   public void registerEditorDesugarings(Path jarfile) {
+    addEditorService(
+        ATermCommands.atermFromString(
+          "Builders(\"sugarj checking\", [SemanticObserver(Strategy(\"sugarj-analyze\"))])"));
+    
     desugaringsFile = jarfile;
   }
   

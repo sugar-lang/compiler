@@ -384,12 +384,10 @@ public class Driver {
       if (currentGrammarTBL != null)
         driverResult.registerParseTable(currentGrammarTBL);
       
-      if (currentTransProg != null) {
-        driverResult.addEditorService(
-            ATermCommands.atermFromString(
-              "Builders(\"sugarj checking\", [SemanticObserver(Strategy(\"sugarj-analyze\"))])"));
+      if (currentTransProg != null)
         driverResult.registerEditorDesugarings(currentTransProg);
-      }
+      else
+        driverResult.registerEditorDesugarings(StdLib.failureTrans);
 
       success = true;
     } 
