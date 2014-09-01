@@ -628,6 +628,8 @@ public class Driver {
 
     log.beginTask("desugaring", "DESUGAR toplevel declaration.", Log.CORE);
     try {
+      String currentModelName = FileCommands.dropExtension(params.sourceFiles.iterator().next().getRelativePath());
+      imp.setCurrentModelName(currentModelName);
       currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
 
       return STRCommands.execute("internal-main", currentTransProg, term, baseProcessor.getInterpreter());
@@ -638,6 +640,7 @@ public class Driver {
       setErrorMessage(msg);
       return term;
     } finally {
+      imp.setCurrentModelName(null);
       log.endTask();
     }
   }

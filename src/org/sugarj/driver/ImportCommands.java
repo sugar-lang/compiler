@@ -255,8 +255,14 @@ public class ImportCommands {
     return renamedTransformedModel;
   }
   
+  public void setCurrentTransName(String currentTransName) {
+    this.currentTransName = currentTransName;
+  }
   public String getCurrentTransName() {
     return currentTransName;
+  }
+  public void setCurrentModelName(String currentModelName) {
+    this.currentModelName = currentModelName;
   }
   public String getCurrentModelName() {
     return currentModelName;
