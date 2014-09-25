@@ -175,8 +175,8 @@ public class ImportCommands {
     if (transformedModelResult.getSynthesizer() == null)
       throw new IllegalArgumentException("Argument " + transformedModelResult + " must be a generated module with getSynthesizer() != null");
     
-    Set<CompilationUnit> allowedModules = new HashSet<>(transformedModelResult.getSynthesizer().modules);
-    for (CompilationUnit mod : transformedModelResult.getSynthesizer().modules) {
+    Set<CompilationUnit> allowedModules = new HashSet<>(transformedModelResult.getSynthesizer().generatorModules);
+    for (CompilationUnit mod : transformedModelResult.getSynthesizer().generatorModules) {
       allowedModules.addAll(mod.getModuleDependencies());
       allowedModules.addAll(mod.getCircularModuleDependencies());
     }
@@ -203,7 +203,7 @@ public class ImportCommands {
       return true;
     if (m.getSynthesizer() == null)
       return false;
-    for (CompilationUnit m2 : m.getSynthesizer().modules)
+    for (CompilationUnit m2 : m.getSynthesizer().generatorModules)
       if (!checkCommunicationIntegrityDepOK(m2, allowed))
         return false;
     return true;
