@@ -321,8 +321,13 @@ public class Driver {
         
         stepped();
         
+        // DISAMB the parsed top-level declaration
+        IStrategoTerm disambed = currentDisambiguate(lastSugaredToplevelDecl);
+        
+        stepped();
+        
         // ANALYZE the parsed top-level declaration
-        IStrategoTerm analyzed = currentAnalyze(lastSugaredToplevelDecl);
+        IStrategoTerm analyzed = currentAnalyze(disambed);
         
         stepped();
         
@@ -621,6 +626,25 @@ public class Driver {
       log.endTask();
     }
   }
+  
+  private IStrategoTerm currentDisambiguate(IStrategoTerm term) throws IOException, InvalidParseTableException, TokenExpectedException, SGLRException {
+    // assimilate toplevelDec using current transformation
+    
+      log.beginTask("analyze", "DISAMBIGUATE toplevel declaration.", Log.CORE);
+      try {
+        currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      
+        return STRCommands.execute("disambiguate", currentTransProg, term, baseProcessor.getInterpreter());
+      } catch (StrategoException e) {
+        String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
+        
+        log.logErr(msg, Log.DETAIL);
+        setErrorMessage(msg);
+        return term;
+      } finally {
+        log.endTask();
+      }
+    }
 
   private IStrategoTerm currentDesugar(IStrategoTerm term) throws IOException,
       InvalidParseTableException, TokenExpectedException, SGLRException {
