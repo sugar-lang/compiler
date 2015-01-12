@@ -798,11 +798,19 @@ public class Driver {
     
     Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
     Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-    Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
+    Result result = Result.readConsistent(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
+    boolean consistent;
+    if (result != null) {
+      consistent = true;
+    }
+    else {
+      result = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
+      consistent = false;
+    }
     
     Set<RelativePath> importSourceFiles;
-    if (res.a != null && !res.a.getSourceArtifacts().isEmpty())
-      importSourceFiles = res.a.getSourceArtifacts();
+    if (result != null && !result.getSourceArtifacts().isEmpty())
+      importSourceFiles = result.getSourceArtifacts();
     else {
       importSourceFiles = new HashSet<>();
       RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, params.env.getSourcePath(), baseProcessor, params.env);
@@ -811,9 +819,7 @@ public class Driver {
     }
 
     boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-    boolean requiresUpdate = res == null ||
-                             !res.b || 
-                             params.env.doGenerateFiles() && res.a.isParsedCompilationUnit();
+    boolean requiresUpdate = result == null || consistent || params.env.doGenerateFiles() && result.isParsedCompilationUnit();
     
     Result circularResult = getCircularImportResult(importSourceFiles);
     if (circularResult != null) {
@@ -832,35 +838,34 @@ public class Driver {
       // FIXME
       assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
       
-      if (syn == null && res != null && res.a != null)
-        syn = res.a.getSynthesizer();
-      res.a = subcompile(importSourceFiles.iterator().next(), syn);
-      if (res.a == null || res.a.hasFailed())
+      if (syn == null && result != null)
+        syn = result.getSynthesizer();
+      result = subcompile(importSourceFiles.iterator().next(), syn);
+      if (result == null || result.hasFailed())
         setErrorMessage("Problems while compiling " + modulePath);
         
       log.log("CONTINUE PROCESSING'" + params.sourceFiles + "'.", Log.CORE);
     }
     
-    if (res.a != null) {
-      if (res.a.hasPersistentVersionChanged())
+    if (result != null) {
+      if (result.hasPersistentVersionChanged())
         setErrorMessage("Result is inconsitent with persistent version.");
-      driverResult.addModuleDependency(res.a);
+      driverResult.addModuleDependency(result);
     }
     
-    boolean isCircularImport = false;
     if (!importSourceFiles.isEmpty())
       // if importSourceFile is delegated to something currently being processed
       for (Driver dr : params.currentlyProcessing)
         if (dr.driverResult.isDelegateOf(importSourceFiles)) {
           baseProcessor.processModuleImport(toplevelDecl);
-          isCircularImport = true;
-          
+
           if (dr != this)
             circularLinks.add(dr.params.sourceFiles);
           
-          break;
+          return true;
         }
-    return isCircularImport;
+    
+    return false;
   }
   
   /**

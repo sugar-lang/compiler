@@ -127,15 +127,15 @@ public class ImportCommands {
     Log.log.beginTask("Transform model " + FileCommands.fileName(modelPath) + " with transformation " + FileCommands.fileName(transformationPath), Log.TRANSFORM);
     try {
       RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
-      Pair<Result, Boolean> transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      Result transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
       
-      Pair<Result, Boolean> modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-      Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      Result modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      Result transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
       if (transformationResult == null || modelResult == null | transformationResult == null)
         throw new IllegalStateException("Could not locate all required compilation results: " + transformationResult + ", " + modelResult + ", " + transformationResult);
       Set<CompilationUnit> synModules = new HashSet<>();
-      synModules.add(modelResult.a);
-      synModules.add(transformationResult.a);
+      synModules.add(modelResult);
+      synModules.add(transformationResult);
       Set<Path> synFiles = new HashSet<>();
       synFiles.add(modelPath);
       synFiles.add(transformationPath);
@@ -144,7 +144,7 @@ public class ImportCommands {
       String modulePath = FileCommands.dropExtension(transformedModelPath.getRelativePath());
       IStrategoTerm importTerm = baseProcessor.reconstructImport(modulePath);
       
-      if (transformedModelResult.a != null && transformedModelResult.b) {
+      if (transformedModelResult != null && transformedModelResult.isConsistent(null, environment.getMode().getModeForRequiredModules())) {
         // result of transformation is already up-to-date, nothing to do here.
         boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
@@ -158,7 +158,7 @@ public class ImportCommands {
         boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
 
         transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-        checkCommunicationIntegrity(transformedModelResult.a, term);
+        checkCommunicationIntegrity(transformedModelResult, term);
         
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
       }
@@ -222,12 +222,12 @@ public class ImportCommands {
     String modelName = FileCommands.dropExtension(modelPath.getRelativePath());
     String transName = FileCommands.dropExtension(transformationPath.getRelativePath());
     String strat = "main-" + transName.replace('/', '_');
-    Pair<Result, Boolean> transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules(), null);
+    Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules(), null);
     
-    if (transformationResult.a == null)
+    if (transformationResult == null)
       throw new IllegalStateException("Could not find compiled transformation.");
     
-    Path trans = str.compile(transformationPath, transformationResult.a.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
+    Path trans = str.compile(transformationPath, transformationResult.getTransitivelyAffectedFiles(), baseProcessor.getLanguage().getPluginDirectory());
     
 //    IStrategoTerm transformationInput = 
 //        ATermCommands.makeTuple(

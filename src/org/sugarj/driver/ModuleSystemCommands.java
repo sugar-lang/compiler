@@ -227,26 +227,26 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Mode mode) throws IOException {
+  public static Result locateResult(String modulePath, Environment env, Mode mode) throws IOException {
     return locateResult(modulePath, env, mode, Collections.<RelativePath, Integer>emptyMap());
   }
   
-  public static Pair<Result, Boolean> locateResult(String modulePath, Environment env, Mode mode, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
+  public static Result locateResult(String modulePath, Environment env, Mode mode, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), FileCommands.dropExtension(modulePath) + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Pair<Result, Boolean> result = Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
-    if (result.a != null)
+    Result result = Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
+    if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       compileDep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
       result = Result.read(env.getStamper(), compileDep, null, editedSourceFiles, mode);
-      if (result.a != null)
+      if (result != null)
         return result;
     }
     
-    return Pair.create(null, false);
+    return null;
   }
 }
