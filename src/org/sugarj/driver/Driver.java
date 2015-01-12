@@ -399,8 +399,8 @@ public class Driver {
       params.renamings.addAll(originalRenamings);
 
       if (!interrupt) {
-        driverResult.write();
         driverResult.setState(success ? CompilationUnit.State.SUCCESS : CompilationUnit.State.FAILURE);
+        driverResult.write();
       } else {
         driverResult.setState(CompilationUnit.State.SUCCESS);
         driverResult.setSugaredSyntaxTree(null);
