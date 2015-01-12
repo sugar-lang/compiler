@@ -820,7 +820,7 @@ public class Driver {
     }
 
     boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-    boolean requiresUpdate = result == null || !consistent || params.env.doGenerateFiles() && result.isParsedCompilationUnit();
+    boolean requiresUpdate = result == null || !consistent || !result.isFinished() || params.env.doGenerateFiles() && result.isParsedCompilationUnit();
     
     Result circularResult = getCircularImportResult(importSourceFiles);
     if (circularResult != null) {
