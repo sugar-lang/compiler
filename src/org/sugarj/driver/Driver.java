@@ -310,6 +310,7 @@ public class Driver {
     params.currentlyProcessing.add(this);
     
     log.beginTask("processing", "Process " + params.sourceFiles, Log.CORE);
+    driverResult.setState(CompilationUnit.State.IN_PROGESS); 
     boolean success = false;
     try {
       boolean done = false;
@@ -399,9 +400,9 @@ public class Driver {
 
       if (!interrupt) {
         driverResult.write();
-        driverResult.setFailed(!success);
+        driverResult.setState(success ? CompilationUnit.State.SUCCESS : CompilationUnit.State.FAILURE);
       } else {
-        driverResult.setFailed(false);
+        driverResult.setState(CompilationUnit.State.SUCCESS);
         driverResult.setSugaredSyntaxTree(null);
       }
     }
@@ -819,7 +820,7 @@ public class Driver {
     }
 
     boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-    boolean requiresUpdate = result == null || consistent || params.env.doGenerateFiles() && result.isParsedCompilationUnit();
+    boolean requiresUpdate = result == null || !consistent || params.env.doGenerateFiles() && result.isParsedCompilationUnit();
     
     Result circularResult = getCircularImportResult(importSourceFiles);
     if (circularResult != null) {
@@ -983,7 +984,7 @@ public class Driver {
     IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
     ATermCommands.atermToFile(thisModel, thisModelPath);
 
-    boolean failed = driverResult.hasFailed();
+    CompilationUnit.State state = driverResult.getState();
     Set<CompilationUnit> dependencies = new HashSet<>(driverResult.getModuleDependencies());
     Set<CompilationUnit> circularDepdencnies = new HashSet<>(driverResult.getCircularModuleDependencies());
     Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
@@ -993,7 +994,8 @@ public class Driver {
     // TODO Declare a synthesizer?
     Result modelResult = subcompile(thisModelPath, null);
     
-    failed |= modelResult.hasFailed();
+    if (modelResult.hasFailed())
+      state = CompilationUnit.State.FAILURE;
     dependencies.addAll(modelResult.getModuleDependencies());
     circularDepdencnies.addAll(modelResult.getCircularModuleDependencies());
     generatedFiles.addAll(modelResult.getGeneratedFiles());
@@ -1006,8 +1008,7 @@ public class Driver {
     
     this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode(), params.syn);
     
-    if (failed)
-      driverResult.setFailed(true);
+    driverResult.setState(state);
     for (CompilationUnit cu : dependencies)
       driverResult.addModuleDependency(cu);
     for (CompilationUnit cu : circularDepdencnies)

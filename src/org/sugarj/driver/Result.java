@@ -23,7 +23,6 @@ import org.sugarj.common.cleardep.mode.ForEditorMode;
 import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
-import org.sugarj.util.Pair;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
@@ -39,7 +38,6 @@ public class Result extends CompilationUnit {
   private IStrategoTerm desugaredSyntaxTree;
   private Path parseTableFile;
   private Path desugaringsFile;
-  private boolean failed;
   
   /**
    * Transitive closure (over module dependencies) of required and generated files.
@@ -63,7 +61,6 @@ public class Result extends CompilationUnit {
     desugaredSyntaxTree = null;
     parseTableFile = null;
     desugaringsFile = null;
-    failed = false;
     transitivelyAffectedFiles = new HashMap<>();
     deferredSourceFiles = new HashMap<>();
   }
@@ -136,7 +133,7 @@ public class Result extends CompilationUnit {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
       return false;
     
-    if (ForEditorMode.isForEditor(mode) && !hasFailed() && getSugaredSyntaxTree() == null)
+    if (ForEditorMode.isForEditor(mode) && getState() != State.FAILURE && getSugaredSyntaxTree() == null)
       return false;
     
     return true;
@@ -214,14 +211,6 @@ public class Result extends CompilationUnit {
     return persistentPath;
   }
   
-  public boolean hasFailed() {
-    return failed;
-  }
-  
-  public void setFailed(boolean hasFailed) {
-    this.failed = hasFailed;
-  }
-  
   public boolean isGenerated() {
     for (RelativePath sourceFile : getSourceArtifacts())
       if (sourceFile != null && "model".equals(FileCommands.getExtension(sourceFile)))
@@ -282,7 +271,6 @@ public class Result extends CompilationUnit {
     compiled.desugaredSyntaxTree = desugaredSyntaxTree;
     compiled.parseTableFile = parseTableFile;
     compiled.desugaringsFile = desugaringsFile;
-    compiled.failed = failed;
     compiled.transitivelyAffectedFiles = null;
     
     for (Entry<Set<? extends Path>, Set<? extends Path>> e : deferredSourceFiles.entrySet()) {
