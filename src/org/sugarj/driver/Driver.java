@@ -792,75 +792,74 @@ public class Driver {
    * @throws ClassNotFoundException 
    */
   protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, Synthesizer syn) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
-    boolean isCircularImport = false;
+    // module is in sugarj standard library
+    if (modulePath.startsWith("org/sugarj"))
+      return false;
     
-    if (!modulePath.startsWith("org/sugarj")) { // module is not in sugarj standard library
-      Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
-      Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-      Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
-      
-      Set<RelativePath> importSourceFiles;
-      if (res.a != null && !res.a.getSourceArtifacts().isEmpty())
-        importSourceFiles = res.a.getSourceArtifacts();
-      else {
-        importSourceFiles = new HashSet<>();
-        RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, params.env.getSourcePath(), baseProcessor, params.env);
-        if (importSourceFile != null)
-          importSourceFiles.add(importSourceFile);
-      }
+    Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
+    Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
+    Pair<Result, Boolean> res = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
+    
+    Set<RelativePath> importSourceFiles;
+    if (res.a != null && !res.a.getSourceArtifacts().isEmpty())
+      importSourceFiles = res.a.getSourceArtifacts();
+    else {
+      importSourceFiles = new HashSet<>();
+      RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, params.env.getSourcePath(), baseProcessor, params.env);
+      if (importSourceFile != null)
+        importSourceFiles.add(importSourceFile);
+    }
 
-      boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-      boolean requiresUpdate = res == null ||
-                               !res.b || 
-                               params.env.doGenerateFiles() && res.a.isParsedCompilationUnit();
-      
-      if (getCircularImportResult(importSourceFiles) != null) {
-        // Circular import. Assume source file does not provide syntactic sugar.
-        log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
-        baseProcessor.processModuleImport(toplevelDecl);
-        isCircularImport = true;
-        circularLinks.add(importSourceFiles);
-      }
-      else if (sourceFileAvailable && requiresUpdate) {
-        // Required module needs recompilation.
-        log.log("Need to compile imported module " + modulePath + " first.", Log.IMPORT);
-        
-        // FIXME
-        assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
-        
-        if (syn == null && res != null && res.a != null)
-          syn = res.a.getSynthesizer();
-        res.a = subcompile(importSourceFiles.iterator().next(), syn);
-        if (res.a == null || res.a.hasFailed())
-          setErrorMessage("Problems while compiling " + modulePath);
-          
-        log.log("CONTINUE PROCESSING'" + params.sourceFiles + "'.", Log.CORE);
-      }
-      
-      if (isCircularImport) {
-        driverResult.addCircularModuleDependency(getCircularImportResult(importSourceFiles));
-      }
-      
-      if (!isCircularImport && res.a != null) {
-        if (res.a.hasPersistentVersionChanged())
-          setErrorMessage("Result is inconsitent with persistent version.");
-        driverResult.addModuleDependency(res.a);
-      }
-      
-      if (!isCircularImport && !importSourceFiles.isEmpty())
-        // if importSourceFile is delegated to something currently being processed
-        for (Driver dr : params.currentlyProcessing)
-          if (dr.driverResult.isDelegateOf(importSourceFiles)) {
-            baseProcessor.processModuleImport(toplevelDecl);
-            isCircularImport = true;
-            
-            if (dr != this)
-              circularLinks.add(dr.params.sourceFiles);
-            
-            break;
-          }
+    boolean sourceFileAvailable = !importSourceFiles.isEmpty();
+    boolean requiresUpdate = res == null ||
+                             !res.b || 
+                             params.env.doGenerateFiles() && res.a.isParsedCompilationUnit();
+    
+    Result circularResult = getCircularImportResult(importSourceFiles);
+    if (circularResult != null) {
+      // Circular import. Assume source file does not provide syntactic sugar.
+      log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
+      baseProcessor.processModuleImport(toplevelDecl);
+      circularLinks.add(importSourceFiles);
+      driverResult.addModuleDependency(circularResult);
+      return true;
     }
     
+    if (sourceFileAvailable && requiresUpdate) {
+      // Required module needs recompilation.
+      log.log("Need to compile imported module " + modulePath + " first.", Log.IMPORT);
+      
+      // FIXME
+      assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
+      
+      if (syn == null && res != null && res.a != null)
+        syn = res.a.getSynthesizer();
+      res.a = subcompile(importSourceFiles.iterator().next(), syn);
+      if (res.a == null || res.a.hasFailed())
+        setErrorMessage("Problems while compiling " + modulePath);
+        
+      log.log("CONTINUE PROCESSING'" + params.sourceFiles + "'.", Log.CORE);
+    }
+    
+    if (res.a != null) {
+      if (res.a.hasPersistentVersionChanged())
+        setErrorMessage("Result is inconsitent with persistent version.");
+      driverResult.addModuleDependency(res.a);
+    }
+    
+    boolean isCircularImport = false;
+    if (!importSourceFiles.isEmpty())
+      // if importSourceFile is delegated to something currently being processed
+      for (Driver dr : params.currentlyProcessing)
+        if (dr.driverResult.isDelegateOf(importSourceFiles)) {
+          baseProcessor.processModuleImport(toplevelDecl);
+          isCircularImport = true;
+          
+          if (dr != this)
+            circularLinks.add(dr.params.sourceFiles);
+          
+          break;
+        }
     return isCircularImport;
   }
   
@@ -983,7 +982,8 @@ public class Driver {
     Set<CompilationUnit> dependencies = new HashSet<>(driverResult.getModuleDependencies());
     Set<CompilationUnit> circularDepdencnies = new HashSet<>(driverResult.getCircularModuleDependencies());
     Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
-    Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies()); 
+    Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies());
+    Integer interfaceHash = driverResult.getInterfaceHash();
 
     // TODO Declare a synthesizer?
     Result modelResult = subcompile(thisModelPath, null);
@@ -998,6 +998,7 @@ public class Driver {
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
+    
     this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode(), params.syn);
     
     if (failed)
@@ -1005,11 +1006,12 @@ public class Driver {
     for (CompilationUnit cu : dependencies)
       driverResult.addModuleDependency(cu);
     for (CompilationUnit cu : circularDepdencnies)
-      driverResult.addCircularModuleDependency(cu);
+      driverResult.addModuleDependency(cu);
     for (Path p : generatedFiles)
       driverResult.addGeneratedFile(p);
     for (Path p : externalFileDependencies)
       driverResult.addExternalFileDependency(p);
+    driverResult.setInterfaceHash(interfaceHash);
     
     generateModel();
   }
