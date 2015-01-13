@@ -30,7 +30,7 @@ import org.spoofax.jsglr.shared.SGLRException;
 import org.spoofax.jsglr.shared.TokenExpectedException;
 import org.spoofax.terms.Term;
 import org.strategoxt.HybridInterpreter;
-import org.strategoxt.imp.nativebundle.SDFBundleCommand;
+import org.strategoxt.imp.metatooling.stratego.SDFBundleCommand;
 import org.strategoxt.lang.Context;
 import org.strategoxt.lang.StrategoExit;
 import org.strategoxt.permissivegrammars.make_permissive;

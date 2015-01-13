@@ -14,7 +14,10 @@ Require-Bundle: org.eclipse.ui,
  org.strategoxt.imp.generator,
  org.sugarj.common,
  org.sugarj.stdlib,
- org.sugarj.baselang
+ org.sugarj.baselang,
+ org.spoofax.interpreter.core,
+ org.spoofax.interpreter.externaldeps,
+ org.strategoxt.imp.metatooling
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.7
 Export-Package: 
