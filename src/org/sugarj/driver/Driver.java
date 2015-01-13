@@ -35,7 +35,6 @@ import org.spoofax.jsglr.client.InvalidParseTableException;
 import org.spoofax.jsglr.client.ParseTable;
 import org.spoofax.jsglr.client.SGLR;
 import org.spoofax.jsglr.client.imploder.ImploderAttachment;
-import org.spoofax.jsglr.client.imploder.TreeBuilder;
 import org.spoofax.jsglr.shared.BadTokenException;
 import org.spoofax.jsglr.shared.SGLRException;
 import org.spoofax.jsglr.shared.TokenExpectedException;
@@ -113,7 +112,6 @@ public class Driver {
   
   private IStrategoTerm lastSugaredToplevelDecl;
   
-  private SGLR editorServicesParser;
   private SGLR parser;
   
   
@@ -270,12 +268,8 @@ public class Driver {
     availableSTRImports = new ArrayList<String>();
     availableSTRImports.add(baseLanguage.getInitTransModuleName());
   
-    SGLR sdfParser = new SGLR(new TreeBuilder(), ATermCommands.parseTableManager.loadFromFile(StdLib.sdfTbl.getAbsolutePath()));
-    SGLR strParser = new SGLR(new TreeBuilder(), ATermCommands.parseTableManager.loadFromFile(StdLib.strategoTbl.getAbsolutePath()));
-    editorServicesParser = new SGLR(new TreeBuilder(), ATermCommands.parseTableManager.loadFromFile(StdLib.editorServicesTbl.getAbsolutePath()));
-    
-    sdf = new SDFCommands(sdfParser, sdfCache, params.env);
-    str = new STRCommands(strParser, strCache, params.env);
+    sdf = new SDFCommands(StdLib.sdfParser, sdfCache, params.env);
+    str = new STRCommands(StdLib.strategoParser, strCache, params.env);
   }
   
   private void initForSources(DriverParameters params) throws IOException, TokenExpectedException, SGLRException, InterruptedException {
@@ -292,7 +286,6 @@ public class Driver {
 
     baseProcessor.init(params.sourceFiles, params.env);
     baseProcessor.getInterpreter().addOperatorRegistry(new SugarJPrimitivesLibrary(this, imp));
-    initEditorServices();
   }
 
   /**
@@ -1300,27 +1293,6 @@ public class Driver {
       setErrorMessage(lastSugaredToplevelDecl, "Declaration name " + decName + " does not match file name " + expectedDecName);
   }
 
-  private void initEditorServices() throws IOException, TokenExpectedException, SGLRException, InterruptedException {
-    List<IStrategoTerm> stdServices = parseEditorServiceFile(StdLib.stdEditor);
-    for (IStrategoTerm service : stdServices)
-      driverResult.addEditorService(service);
-    
-    List<IStrategoTerm> baseServices = parseEditorServiceFile(baseLanguage.getInitEditor());
-    for (IStrategoTerm service : baseServices)
-      driverResult.addEditorService(service);
-  }
-  
-  private List<IStrategoTerm> parseEditorServiceFile(Path editorFile) throws TokenExpectedException, BadTokenException, org.spoofax.jsglr.client.ParseException, SGLRException, InterruptedException, IOException {
-    IStrategoTerm initEditor = (IStrategoTerm) editorServicesParser.parse(FileCommands.readFileAsString(editorFile), editorFile.getAbsolutePath(), "Module");
-
-    IStrategoTerm services = ATermCommands.getApplicationSubterm(initEditor, "Module", 2);
-    
-    if (!ATermCommands.isList(services))
-      throw new IllegalStateException("initial editor ill-formed");
-    
-    return ATermCommands.getList(services);
-  }
-  
   @SuppressWarnings("unchecked")
   private static synchronized void initializeCaches(Environment environment, boolean force) throws IOException {
     if (environment.getCacheDir() == null)
