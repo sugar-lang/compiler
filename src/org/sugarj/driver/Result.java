@@ -119,7 +119,8 @@ public class Result extends CompilationUnit {
   }
 
   public void addEditorService(IStrategoTerm service) {
-    editorServices.add(service);
+    if (!editorServices.contains(service))
+      editorServices.add(service);
   }
   
   public List<IStrategoTerm> getEditorServices() {
