@@ -2,7 +2,6 @@ package org.sugarj.driver;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -42,18 +41,13 @@ public class DriverParameters {
   /**
    * Possibly edited source files and their content.
    */
-  public final Map<RelativePath, String> sourceFiles;
-  
-  // FIXME there may be multiple source files
-  public RelativePath getSourceFile() {
-    return sourceFiles.keySet().iterator().next();
-  }
+  public final Map<RelativePath, String> editedSources;
   
   /**
    * Stamps of the source files.
-   * `sourceStamps.keySet() == sourceFiles.keySet()`
+   * `editedSourceStamps.keySet() == editedSources.keySet()`
    */
-  public final Map<RelativePath, Integer> sourceStamps;
+  public final Map<RelativePath, Integer> editedSourceStamps;
   
   /**
    * Provides toplevel declarations for all source files.
@@ -90,34 +84,15 @@ public class DriverParameters {
   
   public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
     String source = editedSources.get(sourceFile);
-    Integer stamp = editedSourceStamps.get(sourceFile);
+    if (source == null)
+      source = FileCommands.readFileAsString(sourceFile);
     
-    if (source != null)
-      return new DriverParameters(
-          env,
-          baseLang,
-          Collections.singleton(sourceFile),
-          Collections.singletonMap(sourceFile, source),
-          editedSourceStamps,
-          new SourceToplevelDeclarationProvider(source, sourceFile),
-          currentlyProcessing,
-          renamings,
-          monitor,
-          syn);
-
-    source = FileCommands.readFileAsString(sourceFile);
-    stamp = FileCommands.fileHash(sourceFile);
-    Map<RelativePath, String> sourceFiles = new HashMap<>(editedSources);
-    sourceFiles.put(sourceFile, source);
-    Map<RelativePath, Integer> sourceStamps = new HashMap<>(editedSourceStamps);
-    sourceStamps.put(sourceFile, stamp);
-
     return new DriverParameters(
         env,
         baseLang,
         Collections.singleton(sourceFile),
-        sourceFiles,
-        sourceStamps,
+        Collections.singletonMap(sourceFile, source),
+        editedSourceStamps,
         new SourceToplevelDeclarationProvider(source, sourceFile),
         currentlyProcessing,
         renamings,
@@ -126,36 +101,13 @@ public class DriverParameters {
   }
   
   public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
-    String source = editedSources.get(sourceFile);
-    Integer stamp = editedSourceStamps.get(sourceFile);
-    
-    if (source != null)
-      return new DriverParameters(
-          env,
-          baseLang,
-          Collections.singleton(sourceFile),
-          editedSources,
-          editedSourceStamps,
-          new TermToplevelDeclarationProvider(termSource, sourceFile, env),
-          currentlyProcessing,
-          renamings,
-          monitor,
-          syn);
-    
-    source = FileCommands.readFileAsString(sourceFile);
-    stamp = FileCommands.fileHash(sourceFile);
-    Map<RelativePath, String> sourceFiles = new HashMap<>(editedSources);
-    sourceFiles.put(sourceFile, source);
-    Map<RelativePath, Integer> sourceStamps = new HashMap<>(editedSourceStamps);
-    sourceStamps.put(sourceFile, stamp);
-
     return new DriverParameters(
         env,
         baseLang,
         Collections.singleton(sourceFile),
-        sourceFiles,
-        sourceStamps,
-        new SourceToplevelDeclarationProvider(source, sourceFile),
+        editedSources,
+        editedSourceStamps,
+        new TermToplevelDeclarationProvider(termSource, sourceFile, env),
         currentlyProcessing,
         renamings,
         monitor,
@@ -200,8 +152,8 @@ public class DriverParameters {
     this.env = env;
     this.baseLang = baseLang;
     this.sourceFilePaths = sourceFilePaths;
-    this.sourceFiles = sourceFiles;
-    this.sourceStamps = sourceStamps;
+    this.editedSources = sourceFiles;
+    this.editedSourceStamps = sourceStamps;
     this.declProvider = declProvider;
     this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;

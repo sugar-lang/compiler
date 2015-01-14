@@ -87,7 +87,7 @@ public class Result extends CompilationUnit {
       final Map<Path, Integer> deps = new HashMap<>();
       
       ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
-        @Override public Void visit(CompilationUnit mod, Mode mode) {
+        @Override public Void visit(CompilationUnit mod, Mode<?> mode) {
           deps.putAll(((Result) mod).generatedFiles); 
           deps.putAll(((Result) mod).externalFileDependencies);
           return null;
