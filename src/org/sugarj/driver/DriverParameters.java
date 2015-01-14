@@ -2,6 +2,7 @@ package org.sugarj.driver;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -36,19 +37,23 @@ public class DriverParameters {
   /**
    * Files to process.
    */
-  public final Set<RelativePath> sourceFiles;
+  public final Set<RelativePath> sourceFilePaths;
   
   /**
-   * Source files that have been edited and differ
-   * from the stored version of the file.
+   * Possibly edited source files and their content.
    */
-  public final Map<RelativePath, String> editedSources;
+  public final Map<RelativePath, String> sourceFiles;
+  
+  // FIXME there may be multiple source files
+  public RelativePath getSourceFile() {
+    return sourceFiles.keySet().iterator().next();
+  }
   
   /**
-   * Stamps of the edited source files.
-   * `editedSourceStamps.keySet() == editedSources.keySet()`
+   * Stamps of the source files.
+   * `sourceStamps.keySet() == sourceFiles.keySet()`
    */
-  public final Map<RelativePath, Integer> editedSourceStamps;
+  public final Map<RelativePath, Integer> sourceStamps;
   
   /**
    * Provides toplevel declarations for all source files.
@@ -85,14 +90,34 @@ public class DriverParameters {
   
   public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
     String source = editedSources.get(sourceFile);
-    if (source == null)
-      source = FileCommands.readFileAsString(sourceFile);
+    Integer stamp = editedSourceStamps.get(sourceFile);
+    
+    if (source != null)
+      return new DriverParameters(
+          env,
+          baseLang,
+          Collections.singleton(sourceFile),
+          Collections.singletonMap(sourceFile, source),
+          editedSourceStamps,
+          new SourceToplevelDeclarationProvider(source, sourceFile),
+          currentlyProcessing,
+          renamings,
+          monitor,
+          syn);
+
+    source = FileCommands.readFileAsString(sourceFile);
+    stamp = FileCommands.fileHash(sourceFile);
+    Map<RelativePath, String> sourceFiles = new HashMap<>(editedSources);
+    sourceFiles.put(sourceFile, source);
+    Map<RelativePath, Integer> sourceStamps = new HashMap<>(editedSourceStamps);
+    sourceStamps.put(sourceFile, stamp);
+
     return new DriverParameters(
         env,
         baseLang,
         Collections.singleton(sourceFile),
-        editedSources,
-        editedSourceStamps,
+        sourceFiles,
+        sourceStamps,
         new SourceToplevelDeclarationProvider(source, sourceFile),
         currentlyProcessing,
         renamings,
@@ -100,14 +125,61 @@ public class DriverParameters {
         syn);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
+    String source = editedSources.get(sourceFile);
+    Integer stamp = editedSourceStamps.get(sourceFile);
+    
+    if (source != null)
+      return new DriverParameters(
+          env,
+          baseLang,
+          Collections.singleton(sourceFile),
+          editedSources,
+          editedSourceStamps,
+          new TermToplevelDeclarationProvider(termSource, sourceFile, env),
+          currentlyProcessing,
+          renamings,
+          monitor,
+          syn);
+    
+    source = FileCommands.readFileAsString(sourceFile);
+    stamp = FileCommands.fileHash(sourceFile);
+    Map<RelativePath, String> sourceFiles = new HashMap<>(editedSources);
+    sourceFiles.put(sourceFile, source);
+    Map<RelativePath, Integer> sourceStamps = new HashMap<>(editedSourceStamps);
+    sourceStamps.put(sourceFile, stamp);
+
     return new DriverParameters(
         env,
         baseLang,
         Collections.singleton(sourceFile),
-        editedSources,
-        editedSourceStamps,
-        new TermToplevelDeclarationProvider(termSource, sourceFile, env),
+        sourceFiles,
+        sourceStamps,
+        new SourceToplevelDeclarationProvider(source, sourceFile),
+        currentlyProcessing,
+        renamings,
+        monitor,
+        syn);
+  }
+  
+  public static DriverParameters create(
+      Environment env,
+      AbstractBaseLanguage baseLang,
+      Set<RelativePath> sourceFilePaths,
+      Map<RelativePath, String> sourceFiles,
+      Map<RelativePath, Integer> sourceStamps,
+      ToplevelDeclarationProvider declProvider, 
+      List<Driver> currentlyProcessing,
+      List<FromTo> renamings,
+      IProgressMonitor monitor,
+      Synthesizer syn) {
+    return new DriverParameters(
+        env,
+        baseLang,
+        sourceFilePaths,
+        sourceFiles,
+        sourceStamps,
+        declProvider,
         currentlyProcessing,
         renamings,
         monitor,
@@ -117,9 +189,9 @@ public class DriverParameters {
   private DriverParameters(
       Environment env,
       AbstractBaseLanguage baseLang,
-      Set<RelativePath> sourceFiles, 
-      Map<RelativePath, String> editedSources,
-      Map<RelativePath, Integer> editedSourceStamps,
+      Set<RelativePath> sourceFilePaths,
+      Map<RelativePath, String> sourceFiles,
+      Map<RelativePath, Integer> sourceStamps,
       ToplevelDeclarationProvider declProvider, 
       List<Driver> currentlyProcessing,
       List<FromTo> renamings,
@@ -127,9 +199,9 @@ public class DriverParameters {
       Synthesizer syn) {
     this.env = env;
     this.baseLang = baseLang;
+    this.sourceFilePaths = sourceFilePaths;
     this.sourceFiles = sourceFiles;
-    this.editedSources = editedSources;
-    this.editedSourceStamps = editedSourceStamps;
+    this.sourceStamps = sourceStamps;
     this.declProvider = declProvider;
     this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;

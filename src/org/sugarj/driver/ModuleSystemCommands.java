@@ -3,6 +3,7 @@ package org.sugarj.driver;
 import static org.sugarj.common.Log.log;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -17,7 +18,7 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.mode.Mode;
+import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 
@@ -198,7 +199,7 @@ public class ModuleSystemCommands {
 
   private static RelativePath searchFile(Path base, String relativePath, String extension, Result driverResult) {
     if (relativePath.startsWith(base.getAbsolutePath())) {
-      int sepOffset = relativePath.endsWith(Environment.sep) ? 0 : 1;
+      int sepOffset = relativePath.endsWith(File.separator) ? 0 : 1;
       relativePath = relativePath.substring(base.getAbsolutePath().length() + sepOffset);
     }
     
@@ -230,14 +231,14 @@ public class ModuleSystemCommands {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), FileCommands.dropExtension(modulePath) + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.read(env.getStamper(), compileDep, editedDep, mode);
+    Result result = Result.read(env.getStamper(), mode, compileDep, editedDep);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       compileDep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.read(env.getStamper(), compileDep, null, mode);
+      result = Result.read(env.getStamper(), mode, compileDep);
       if (result != null)
         return result;
     }

@@ -9,7 +9,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
@@ -17,10 +16,9 @@ import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.cleardep.CompilationUnit;
+import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.cleardep.Synthesizer;
-import org.sugarj.common.cleardep.mode.ForEditorMode;
-import org.sugarj.common.cleardep.mode.Mode;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 
@@ -130,11 +128,8 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  protected boolean isConsistentExtend(Mode mode) {
+  protected boolean isConsistentExtend() {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
-      return false;
-    
-    if (ForEditorMode.isForEditor(mode) && getState() != State.FAILURE && getSugaredSyntaxTree() == null)
       return false;
     
     return true;
@@ -261,43 +256,85 @@ public class Result extends CompilationUnit {
 //    deferredSourceFiles = (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
   }
 
-  @Override
-  protected void copyContentTo(CompilationUnit c) {
-    super.copyContentTo(c);
-    Result compiled = (Result) c;
-    compiled.editorServices.addAll(editorServices);
-    compiled.collectedErrors.addAll(collectedErrors);
-    compiled.parseErrors.addAll(parseErrors);
-    compiled.sugaredSyntaxTree = sugaredSyntaxTree;
-    compiled.desugaredSyntaxTree = desugaredSyntaxTree;
-    compiled.parseTableFile = parseTableFile;
-    compiled.desugaringsFile = desugaringsFile;
-    compiled.transitivelyAffectedFiles = null;
-    
-    for (Entry<Set<? extends Path>, Set<? extends Path>> e : deferredSourceFiles.entrySet()) {
-      Set<RelativePath> newVal = new HashSet<>();
-      for (Path p : e.getValue()) {
-        RelativePath oldP = FileCommands.getRelativePath(targetDir, p);
-        RelativePath newP = new RelativePath(compiled.targetDir, oldP.getRelativePath());
-        newVal.add(newP);
-      }
-      compiled.deferredSourceFiles.put(e.getKey(), newVal);
-    }
-  }
+//  @Override
+//  protected void copyContentTo(CompilationUnit c) {
+//    super.copyContentTo(c);
+//    Result compiled = (Result) c;
+//    compiled.editorServices.addAll(editorServices);
+//    compiled.collectedErrors.addAll(collectedErrors);
+//    compiled.parseErrors.addAll(parseErrors);
+//    compiled.sugaredSyntaxTree = sugaredSyntaxTree;
+//    compiled.desugaredSyntaxTree = desugaredSyntaxTree;
+//    compiled.parseTableFile = parseTableFile;
+//    compiled.desugaringsFile = desugaringsFile;
+//    compiled.transitivelyAffectedFiles = null;
+//    
+//    for (Entry<Set<? extends Path>, Set<? extends Path>> e : deferredSourceFiles.entrySet()) {
+//      Set<RelativePath> newVal = new HashSet<>();
+//      for (Path p : e.getValue()) {
+//        RelativePath oldP = FileCommands.getRelativePath(targetDir, p);
+//        RelativePath newP = new RelativePath(compiled.targetDir, oldP.getRelativePath());
+//        newVal.add(newP);
+//      }
+//      compiled.deferredSourceFiles.put(e.getKey(), newVal);
+//    }
+//  }
   
   public static Result read(Stamper stamper, Path p) throws ClassNotFoundException, IOException {
     return read(Result.class, stamper, p);
   }
   
-  public static Result read(Stamper stamper, Path compileDep, Path editedDep, Mode mode) throws IOException {
-    return read(Result.class, stamper, compileDep, editedDep, mode);
+  public static Result read(Stamper stamper, Mode<Result> mode, Path... deps) throws IOException {
+    return CompilationUnit.read(Result.class, stamper, mode, deps);
   }
   
-  public static Result readConsistent(Stamper stamper, Path compileDep, Path editedDep, Map<RelativePath, Integer> editedSourceFiles, Mode mode) throws IOException {
-    return readConsistent(Result.class, stamper, compileDep, editedDep, editedSourceFiles, mode);
+  public static Result readConsistent(Stamper stamper, Mode<Result> mode, Map<RelativePath, Integer> sourceFiles, Path... deps) throws IOException {
+    return CompilationUnit.readConsistent(Result.class, stamper, mode, sourceFiles, deps);
   }
 
-  public static Result create(Stamper stamper, Path compileDep, Path compileTarget, Path editedDep, Path editedTarget, Set<RelativePath> sourceFiles, Map<RelativePath, Integer> editedSourceFiles, Mode mode, Synthesizer syn) throws IOException {
-    return create(Result.class, stamper, compileDep, compileTarget, editedDep, editedTarget, sourceFiles, editedSourceFiles, mode, syn);
+  public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Map<RelativePath, Integer> sourceFiles, Path dep) throws IOException {
+    return CompilationUnit.create(Result.class, stamper, mode, syn, sourceFiles, dep);
+  }
+  
+  public static class CompilerMode extends Mode<Result> {
+    private static final long serialVersionUID = -6029285930002846101L;
+    public static CompilerMode instance = new CompilerMode();
+    private CompilerMode() { }
+    
+    @Override
+    public Mode<Result> getModeForRequiredModules() {
+      return this;
+    }
+
+    @Override
+    public boolean canAccept(Result e) {
+      return e.getMode() == this;
+    }
+
+    @Override
+    public Result accept(Result e) {
+      return e;
+    }
+  }
+  
+  public static class EditorMode extends Mode<Result> {
+    private static final long serialVersionUID = -8919402178703175221L;
+    public static EditorMode instance = new EditorMode();
+    private EditorMode() { }
+    
+    @Override
+    public Mode<Result> getModeForRequiredModules() {
+      return CompilerMode.instance;
+    }
+
+    @Override
+    public boolean canAccept(Result e) {
+      return e.getMode() == this;
+    }
+
+    @Override
+    public Result accept(Result e) {
+      return e;
+    }
   }
 }

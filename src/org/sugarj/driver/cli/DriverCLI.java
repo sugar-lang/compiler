@@ -38,6 +38,7 @@ import org.sugarj.common.Log;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.driver.Result;
+import org.sugarj.driver.Result.CompilerMode;
 import org.sugarj.driver.STRCommands;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
 
@@ -435,24 +436,26 @@ public class DriverCLI {
       CommandExecution.CACHE_INFO = true;
   
     if (line.hasOption("buildpath"))
-      for (String path : line.getOptionValue("buildpath").split(org.sugarj.common.Environment.classpathsep))
+      for (String path : line.getOptionValue("buildpath").split(File.pathSeparator))
         environment.addToIncludePath(pathArgument(path));
   
     if (line.hasOption("sourcepath")) {
       List<Path> sourcePath = new LinkedList<Path>();
-      for (String path : line.getOptionValue("sourcepath").split(org.sugarj.common.Environment.classpathsep))
+      for (String path : line.getOptionValue("sourcepath").split(File.pathSeparator))
         sourcePath.add(pathArgument(path));
       environment.setSourcePath(sourcePath);
     }
   
     if (line.hasOption("d"))
-      environment.setBin(pathArgument(line.getOptionValue("d")));
+      environment.setCompileBin(pathArgument(line.getOptionValue("d")));
     
     if (line.hasOption("cache"))
       environment.setCacheDir(pathArgument(line.getOptionValue("cache")));
   
-    if (line.hasOption("gen-files"))
-      environment.setGenerateFiles(true);
+    if (line.hasOption("gen-files")) {
+      environment.setMode(CompilerMode.instance);
+      environment.setBin(environment.getCompileBin());
+    }
     
     if (line.hasOption("atomic-imports"))
       environment.setAtomicImportParsing(true);
@@ -529,13 +532,13 @@ public class DriverCLI {
         "cp",
         "buildpath",
         true,
-        "Specify where to find compiled files. Multiple paths can be given separated by \'" + org.sugarj.common.Environment.classpathsep + "\'.");
+        "Specify where to find compiled files. Multiple paths can be given separated by \'" + File.pathSeparator + "\'.");
   
     options.addOption(
         null,
         "sourcepath",
         true,
-        "Specify where to find source files. Multiple paths can be given separated by \'" + org.sugarj.common.Environment.classpathsep + "\'.");
+        "Specify where to find source files. Multiple paths can be given separated by \'" + File.pathSeparator + "\'.");
   
     options.addOption(
         "d", 

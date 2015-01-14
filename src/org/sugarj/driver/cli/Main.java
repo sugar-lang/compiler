@@ -18,6 +18,7 @@ import org.sugarj.driver.Driver;
 import org.sugarj.driver.DriverParameters;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Result;
+import org.sugarj.driver.Result.CompilerMode;
 import org.sugarj.stdlib.StdLib;
 
 /**
@@ -93,11 +94,13 @@ public class Main {
   // without running eclipse platform,
   // set up a default environment reasonable for command-line execution.
   private static Environment getConsoleEnvironment() {
-    Environment environment = new Environment(true, StdLib.stdLibDir, Stamper.DEFAULT);
+    Environment environment = new Environment(StdLib.stdLibDir, Stamper.DEFAULT);
     environment.setCacheDir(new RelativePath(new AbsolutePath(FileCommands.TMP_DIR), ".sugarjcache"));
     environment.addToSourcePath(new AbsolutePath("."));
     environment.setAtomicImportParsing(true);
     environment.setNoChecking(true);
+    environment.setMode(CompilerMode.instance);
+    environment.setBin(environment.getCompileBin());
     
     for (String cp : System.getProperty("java.class.path").split(System.getProperty("path.separator"))) {
       if (cp.length() > 0)

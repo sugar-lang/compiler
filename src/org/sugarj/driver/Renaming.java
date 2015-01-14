@@ -1,5 +1,6 @@
 package org.sugarj.driver;
 
+import java.io.File;
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,7 +38,7 @@ public class Renaming {
       this.from = FileCommands.fileName(fromPath).replace("-", "$");
       this.to = FileCommands.fileName(toPath).replace("-", "$");
       this.pkgs = new LinkedList<String>();
-      for (String pkg : fromPath.split(Environment.sep))
+      for (String pkg : fromPath.split(File.separator))
         this.pkgs.add(pkg);
       this.pkgs.remove(this.pkgs.size() - 1);
     }
@@ -87,9 +88,9 @@ public class Renaming {
     if (in.equals(ren.from))
       return ren.to;
     
-    String prefix = StringCommands.printListSeparated(ren.pkgs, Environment.sep);
-    if (in.equals(prefix + Environment.sep + ren.from))
-      return prefix + Environment.sep + ren.to;
+    String prefix = StringCommands.printListSeparated(ren.pkgs, File.separator);
+    if (in.equals(prefix + File.separator + ren.from))
+      return prefix + File.separator + ren.to;
     
     return in;
   }

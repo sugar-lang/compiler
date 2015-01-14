@@ -58,6 +58,7 @@ import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
+import org.sugarj.driver.Result.CompilerMode;
 import org.sugarj.driver.caching.ModuleKeyCache;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
@@ -174,9 +175,9 @@ public class Driver {
   private static Result run(Driver driver, DriverParameters params) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
     Entry<ToplevelDeclarationProvider, Driver> pending = null;
     
-    pending = getPendingRun(params.sourceFiles);
-    if (pending != null && !pending.getKey().equals(params.declProvider) && pending.getValue().params.env.doGenerateFiles() == driver.params.env.doGenerateFiles()) {
-      log.log("interrupting " + params.sourceFiles, Log.CORE);
+    pending = getPendingRun(params.sourceFilePaths);
+    if (pending != null && !pending.getKey().equals(params.declProvider) && pending.getValue().params.env.getMode() == driver.params.env.getMode()) {
+      log.log("interrupting " + params.sourceFilePaths, Log.CORE);
       pending.getValue().interrupt();
     }
 
@@ -200,14 +201,14 @@ public class Driver {
 //    }
     
     if (pending == null)
-      putPendingRun(params.sourceFiles, params.declProvider, driver);
+      putPendingRun(params.sourceFilePaths, params.declProvider, driver);
     else {
-      waitForPending(params.sourceFiles);
+      waitForPending(params.sourceFilePaths);
       return run(driver, params);
     }
     
     try {
-      ProcessingListener.notifyProcessingStarts(Driver.class, processingListener, params.sourceFiles);
+      ProcessingListener.notifyProcessingStarts(Driver.class, processingListener, params.sourceFilePaths);
     
       driver.initDriver(params);
       driver.initForSources(params);
@@ -222,7 +223,7 @@ public class Driver {
     } catch (Exception e) {
       org.strategoxt.imp.runtime.Environment.logException(e);
     } finally {
-      pendingRuns.remove(params.sourceFiles);
+      pendingRuns.remove(params.sourceFilePaths);
     }
 
     return driver.driverResult;
@@ -273,18 +274,19 @@ public class Driver {
   }
   
   private void initForSources(DriverParameters params) throws IOException, TokenExpectedException, SGLRException, InterruptedException {
-    if (params.sourceFiles.size() != 1) 
+    if (params.sourceFilePaths.size() != 1) 
       throw new IllegalArgumentException("Cannot yet handle driver calls with more than one source file; FIXME");
     
-    RelativePath sourceFile1 = params.sourceFiles.iterator().next();
+    RelativePath sourceFile1 = params.getSourceFile();
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
+    Path dep = params.env.<Result>getMode() == CompilerMode.instance ? compileDep : parseDep;
     
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode(), params.syn);
+    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, params.sourceStamps, dep);
     imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
 
-    baseProcessor.init(params.sourceFiles, params.env);
+    baseProcessor.init(params.sourceFilePaths, params.env);
     baseProcessor.getInterpreter().addOperatorRegistry(new SugarJPrimitivesLibrary(this, imp));
   }
 
@@ -302,7 +304,7 @@ public class Driver {
     List<FromTo> originalRenamings = new LinkedList<FromTo>(params.renamings);
     params.currentlyProcessing.add(this);
     
-    log.beginTask("processing", "Process " + params.sourceFiles, Log.CORE);
+    log.beginTask("processing", "Process " + params.sourceFilePaths, Log.CORE);
     driverResult.setState(CompilationUnit.State.IN_PROGESS); 
     boolean success = false;
     try {
@@ -362,7 +364,7 @@ public class Driver {
         
         Result delegate = null;
         for (Driver dr : params.currentlyProcessing)
-          if (circularLinks.contains(dr.params.sourceFiles)) {
+          if (circularLinks.contains(dr.params.sourceFilePaths)) {
             delegate = dr.driverResult;
             break;
           }
@@ -386,7 +388,7 @@ public class Driver {
       success = true;
     } 
     finally {
-      log.endTask(success, "done processing " + params.sourceFiles, "failed to process " + params.sourceFiles);
+      log.endTask(success, "done processing " + params.sourceFilePaths, "failed to process " + params.sourceFilePaths);
       params.currentlyProcessing.remove(this);
       params.renamings.clear();
       params.renamings.addAll(originalRenamings);
@@ -575,7 +577,7 @@ public class Driver {
       parseResult = SDFCommands.parseImplode(
           table,
           remainingInput,
-          StringCommands.printListSeparated(params.sourceFiles, "&"),
+          StringCommands.printListSeparated(params.sourceFilePaths, "&"),
           "ToplevelDeclaration",
           recovery,
           true,
@@ -622,7 +624,7 @@ public class Driver {
 
     log.beginTask("desugaring", "DESUGAR toplevel declaration.", Log.CORE);
     try {
-      String currentModelName = FileCommands.dropExtension(params.sourceFiles.iterator().next().getRelativePath());
+      String currentModelName = FileCommands.dropExtension(params.getSourceFile().getRelativePath());
       imp.setCurrentModelName(currentModelName);
       currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
 
@@ -792,13 +794,13 @@ public class Driver {
     
     Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
     Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-    Result result = Result.readConsistent(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
+    Result result = Result.readConsistent(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), params.sourceStamps, compileDep, editedDep);
     boolean consistent;
     if (result != null) {
       consistent = true;
     }
     else {
-      result = Result.read(params.env.getStamper(), compileDep, editedDep, params.env.getMode().getModeForRequiredModules());
+      result = Result.read(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), compileDep, editedDep);
       consistent = false;
     }
     
@@ -813,7 +815,7 @@ public class Driver {
     }
 
     boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-    boolean requiresUpdate = result == null || !consistent || !result.isFinished() || params.env.doGenerateFiles() && result.isParsedCompilationUnit();
+    boolean requiresUpdate = result == null || !consistent || !result.isFinished();
     
     Result circularResult = getCircularImportResult(importSourceFiles);
     if (circularResult != null) {
@@ -838,7 +840,7 @@ public class Driver {
       if (result == null || result.hasFailed())
         setErrorMessage("Problems while compiling " + modulePath);
         
-      log.log("CONTINUE PROCESSING'" + params.sourceFiles + "'.", Log.CORE);
+      log.log("CONTINUE PROCESSING'" + params.sourceFilePaths + "'.", Log.CORE);
     }
     
     if (result != null) {
@@ -854,7 +856,7 @@ public class Driver {
           baseProcessor.processModuleImport(toplevelDecl);
 
           if (dr != this)
-            circularLinks.add(dr.params.sourceFiles);
+            circularLinks.add(dr.params.sourceFilePaths);
           
           return true;
         }
@@ -870,7 +872,7 @@ public class Driver {
    */
   private Result getCircularImportResult(Set<RelativePath> importSourceFiles) {
     for (Driver dr : params.currentlyProcessing)
-      if (!Collections.disjoint(dr.params.sourceFiles, importSourceFiles))
+      if (!Collections.disjoint(dr.params.sourceFilePaths, importSourceFiles))
         return dr.driverResult;
     
     return null;
@@ -888,10 +890,10 @@ public class Driver {
       Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor, syn));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, term, params.sourceFiles, params.sourceStamps, params.currentlyProcessing, params.renamings, params.monitor, syn));
       }
       else
-        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.editedSources, params.editedSourceStamps, params.currentlyProcessing, params.renamings, params.monitor, syn));
+        result = run(DriverParameters.create(params.env, baseLanguage, importSourceFile, params.sourceFiles, params.sourceStamps, params.currentlyProcessing, params.renamings, params.monitor, syn));
       return result;
     } catch (IOException e) {
       setErrorMessage("Problems while compiling " + importSourceFile);
@@ -994,12 +996,12 @@ public class Driver {
     generatedFiles.addAll(modelResult.getGeneratedFiles());
     externalFileDependencies.addAll(modelResult.getExternalFileDependencies()); 
     
-    RelativePath sourceFile1 = params.sourceFiles.iterator().next();
+    RelativePath sourceFile1 = params.getSourceFile();
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
     Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
     Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
-    
-    this.driverResult = Result.create(params.env.getStamper(), compileDep, params.env.getCompileBin(), parseDep, params.env.getParseBin(), params.sourceFiles, params.editedSourceStamps, params.env.getMode(), params.syn);
+    Path dep = params.env.forEditor() ? parseDep : compileDep;
+    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, params.sourceStamps, dep);
     
     driverResult.setState(state);
     for (CompilationUnit cu : dependencies)
@@ -1223,14 +1225,14 @@ public class Driver {
       if (params.sourceFiles.size() != 1)
         throw new IllegalStateException("Cannot generate model for more than a single source file at a time; FIXME.");
       
-      String moduleName = FileCommands.dropExtension(params.sourceFiles.iterator().next().getRelativePath());
+      String moduleName = FileCommands.dropExtension(params.getSourceFile().getRelativePath());
       RelativePath modelOutFile = params.env.createOutPath(moduleName + ".model");
       
       IStrategoTerm modelTerm = makeDesugaredSyntaxTree();
       String string = ATermCommands.atermToString(modelTerm);
       driverResult.generateFile(modelOutFile, string);
       
-      if (params.sourceFiles.contains(modelOutFile))
+      if (params.sourceFilePaths.contains(modelOutFile))
         driverResult.addGeneratedFile(modelOutFile);
     } finally {
       log.endTask();
@@ -1508,7 +1510,7 @@ public class Driver {
     if (params.sourceFiles.size() != 1)
       throw new IllegalStateException("Cannot handle module for more than a single source file at a time; FIXME.");
 
-    return FileCommands.fileName(params.sourceFiles.iterator().next());
+    return FileCommands.fileName(params.getSourceFile());
   }
   
   public SGLR getParser() {
