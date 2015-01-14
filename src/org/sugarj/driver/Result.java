@@ -289,8 +289,8 @@ public class Result extends CompilationUnit {
     return read(Result.class, stamper, p);
   }
   
-  public static Result read(Stamper stamper, Path compileDep, Path editedDep, Map<RelativePath, Integer> editedSourceFiles, Mode mode) throws IOException {
-    return read(Result.class, stamper, compileDep, editedDep, editedSourceFiles, mode);
+  public static Result read(Stamper stamper, Path compileDep, Path editedDep, Mode mode) throws IOException {
+    return read(Result.class, stamper, compileDep, editedDep, mode);
   }
   
   public static Result readConsistent(Stamper stamper, Path compileDep, Path editedDep, Map<RelativePath, Integer> editedSourceFiles, Mode mode) throws IOException {

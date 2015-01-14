@@ -227,21 +227,17 @@ public class ModuleSystemCommands {
   }
   
   public static Result locateResult(String modulePath, Environment env, Mode mode) throws IOException {
-    return locateResult(modulePath, env, mode, Collections.<RelativePath, Integer>emptyMap());
-  }
-  
-  public static Result locateResult(String modulePath, Environment env, Mode mode, Map<RelativePath, Integer> editedSourceFiles) throws IOException {
     RelativePath compileDep = new RelativePath(env.getCompileBin(), FileCommands.dropExtension(modulePath) + ".dep");
     RelativePath editedDep = new RelativePath(env.getParseBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.read(env.getStamper(), compileDep, editedDep, editedSourceFiles, mode);
+    Result result = Result.read(env.getStamper(), compileDep, editedDep, mode);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       compileDep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.read(env.getStamper(), compileDep, null, editedSourceFiles, mode);
+      result = Result.read(env.getStamper(), compileDep, null, mode);
       if (result != null)
         return result;
     }

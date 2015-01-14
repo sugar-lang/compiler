@@ -798,7 +798,7 @@ public class Driver {
       consistent = true;
     }
     else {
-      result = Result.read(params.env.getStamper(), compileDep, editedDep, params.editedSourceStamps, params.env.getMode().getModeForRequiredModules());
+      result = Result.read(params.env.getStamper(), compileDep, editedDep, params.env.getMode().getModeForRequiredModules());
       consistent = false;
     }
     

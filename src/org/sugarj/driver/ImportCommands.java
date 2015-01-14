@@ -127,10 +127,10 @@ public class ImportCommands {
     Log.log.beginTask("Transform model " + FileCommands.fileName(modelPath) + " with transformation " + FileCommands.fileName(transformationPath), Log.TRANSFORM);
     try {
       RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
-      Result transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      Result transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
       
-      Result modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
-      Result transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+      Result modelResult = ModuleSystemCommands.locateResult(modelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
+      Result transformationResult = ModuleSystemCommands.locateResult(transformationPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
       if (transformationResult == null || modelResult == null | transformationResult == null)
         throw new IllegalStateException("Could not locate all required compilation results: " + transformationResult + ", " + modelResult + ", " + transformationResult);
       Set<CompilationUnit> synModules = new HashSet<>();
@@ -157,7 +157,7 @@ public class ImportCommands {
         
         boolean isCircularImport = driver.prepareImport(importTerm, modulePath, syn);
 
-        transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules(), null);
+        transformedModelResult = ModuleSystemCommands.locateResult(transformedModelPath.getRelativePath(), environment, environment.getMode().getModeForRequiredModules());
         checkCommunicationIntegrity(transformedModelResult, term);
         
         return Pair.create(FileCommands.dropExtension(transformedModelPath.getRelativePath()), isCircularImport);
@@ -222,7 +222,7 @@ public class ImportCommands {
     String modelName = FileCommands.dropExtension(modelPath.getRelativePath());
     String transName = FileCommands.dropExtension(transformationPath.getRelativePath());
     String strat = "main-" + transName.replace('/', '_');
-    Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules(), null);
+    Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules());
     
     if (transformationResult == null)
       throw new IllegalStateException("Could not find compiled transformation.");
