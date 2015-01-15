@@ -299,7 +299,7 @@ public class Result extends CompilationUnit {
     return CompilationUnit.create(Result.class, stamper, mode, syn, sourceFiles, dep);
   }
   
-  public static class CompilerMode extends TargettedMode<Result> {
+  public static class CompilerMode implements TargettedMode<Result> {
     private static final long serialVersionUID = -6029285930002846101L;
     
     private Path targetDir;
