@@ -9,9 +9,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
 import org.sugarj.common.ATermCommands;
@@ -227,7 +225,7 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateResult(String modulePath, Environment env, Mode mode) throws IOException {
+  public static Result locateResult(String modulePath, Environment env, Mode<Result> mode) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
     Result result = Result.read(env.getStamper(), mode, dep);

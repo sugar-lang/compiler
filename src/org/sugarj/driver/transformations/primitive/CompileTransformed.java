@@ -22,9 +22,8 @@ import org.sugarj.driver.Driver;
 import org.sugarj.driver.DriverParameters;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Renaming;
-import org.sugarj.driver.Result;
 import org.sugarj.driver.Renaming.FromTo;
-import org.sugarj.util.Pair;
+import org.sugarj.driver.Result;
 
 /**
  * Primitive for looking up and loading a model according to the current environment.
@@ -77,10 +76,10 @@ class CompileTransformed extends AbstractPrimitive {
         if (res != null) {
           context.setCurrent(ATermCommands.atermFromFile(source.getAbsolutePath()));
           
-          Result modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment, environment.getMode().getModeForRequiredModules());
+          Result modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment, environment.<Result>getMode().getModeForRequiredModules());
           if (modelResult != null)
             res.addModuleDependency(modelResult);
-          Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules());
+          Result transformationResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.<Result>getMode().getModeForRequiredModules());
           if (transformationResult != null)
             res.addModuleDependency(transformationResult);
         }
@@ -129,14 +128,14 @@ class CompileTransformed extends AbstractPrimitive {
     Log.log.beginTask("Check communication integrity", Log.CORE);
     try {
       Collection<Path> modelDeps = new HashSet<Path>();
-      Result modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment, environment.getMode().getModeForRequiredModules());
+      Result modelResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(modelPath), environment, environment.<Result>getMode().getModeForRequiredModules());
       if (modelResult != null) {
         modelDeps.addAll(modelResult.getCircularFileDependencies());
         modelDeps.addAll(modelResult.getGeneratedFiles()); 
       }
   
       Collection<Path> transDeps = new HashSet<Path>();
-      Result transResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.getMode().getModeForRequiredModules());
+      Result transResult = ModuleSystemCommands.locateResult(FileCommands.dropExtension(transformationPath.getRelativePath()), environment, environment.<Result>getMode().getModeForRequiredModules());
       if (transResult != null) {
         transDeps.addAll(transResult.getCircularFileDependencies());
         transDeps.addAll(transResult.getGeneratedFiles()); 

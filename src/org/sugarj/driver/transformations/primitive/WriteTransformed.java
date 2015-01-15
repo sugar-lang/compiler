@@ -11,7 +11,6 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
-import org.sugarj.driver.ImportCommands;
 import org.sugarj.driver.Renaming;
 import org.sugarj.driver.Renaming.FromTo;
 
