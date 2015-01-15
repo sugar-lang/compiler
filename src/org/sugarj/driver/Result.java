@@ -15,6 +15,7 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
+import org.sugarj.common.TargettedMode;
 import org.sugarj.common.cleardep.CompilationUnit;
 import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.cleardep.Stamper;
@@ -225,6 +226,7 @@ public class Result extends CompilationUnit {
   @Override
   protected void writeEntity(ObjectOutputStream oos) throws IOException {
     super.writeEntity(oos);
+    oos.writeObject(mode);
 //    oos.writeObject(editorServices = Collections.unmodifiableList(editorServices));
 //    oos.writeObject(collectedErrors = Collections.unmodifiableList(collectedErrors));
 //    oos.writeObject(parseErrors = Collections.unmodifiableSet(parseErrors));
@@ -241,6 +243,7 @@ public class Result extends CompilationUnit {
   @Override
   protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
     super.readEntity(ois);
+    mode = (Mode<?>) ois.readObject();
     transitivelyAffectedFiles = null;
 //    editorServices = (List<IStrategoTerm>) ois.readObject();
 //    collectedErrors = (List<String>) ois.readObject();
@@ -296,10 +299,23 @@ public class Result extends CompilationUnit {
     return CompilationUnit.create(Result.class, stamper, mode, syn, sourceFiles, dep);
   }
   
-  public static class CompilerMode extends Mode<Result> {
+  public static class CompilerMode extends TargettedMode<Result> {
     private static final long serialVersionUID = -6029285930002846101L;
-    public static CompilerMode instance = new CompilerMode();
-    private CompilerMode() { }
+    
+    private Path targetDir;
+    private boolean isTemporary;
+    
+    public CompilerMode() { /* for deserialization */ }
+    
+    public CompilerMode(Path targetDir, boolean isTemporary) {
+      this.targetDir = targetDir;
+      this.isTemporary = isTemporary;
+      try {
+        FileCommands.createDir(targetDir);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
     
     @Override
     public Mode<Result> getModeForRequiredModules() {
@@ -315,26 +331,53 @@ public class Result extends CompilationUnit {
     public Result accept(Result e) {
       return e;
     }
+    
+    @Override
+    public Path getTargetDir() {
+      return targetDir;
+    }
+
+    @Override
+    public boolean isTemporary() {
+      return isTemporary;
+    }
+    
+    @Override
+    public String toString() {
+      return "CompilerMode(" + targetDir + ")";
+    }
   }
   
-  public static class EditorMode extends Mode<Result> {
+  public static class EditorMode extends CompilerMode {
     private static final long serialVersionUID = -8919402178703175221L;
-    public static EditorMode instance = new EditorMode();
-    private EditorMode() { }
+    
+    public EditorMode() {
+      this(FileCommands.tryNewTempDir(), true);
+    }
+    
+    public EditorMode(Path targetDir, boolean isTemporary) {
+      super(targetDir, isTemporary);
+    }
     
     @Override
     public Mode<Result> getModeForRequiredModules() {
-      return CompilerMode.instance;
+      return new CompilerMode(getTargetDir(), true);
     }
 
     @Override
     public boolean canAccept(Result e) {
-      return e.getMode() == this;
+      return e.getDesugaringsFile() != null && FileCommands.exists(e.getDesugaringsFile());
     }
 
     @Override
     public Result accept(Result e) {
       return e;
     }
+    
+    @Override
+    public String toString() {
+      return "EditorMode(" + getTargetDir() + ")";
+    }
+
   }
 }

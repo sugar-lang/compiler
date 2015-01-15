@@ -99,8 +99,7 @@ public class Main {
     environment.addToSourcePath(new AbsolutePath("."));
     environment.setAtomicImportParsing(true);
     environment.setNoChecking(true);
-    environment.setMode(CompilerMode.instance);
-    environment.setBin(environment.getCompileBin());
+    environment.setMode(new CompilerMode(new AbsolutePath("."), false));
     
     for (String cp : System.getProperty("java.class.path").split(System.getProperty("path.separator"))) {
       if (cp.length() > 0)

@@ -39,6 +39,7 @@ import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.driver.Result;
 import org.sugarj.driver.Result.CompilerMode;
+import org.sugarj.driver.Result.EditorMode;
 import org.sugarj.driver.STRCommands;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
 
@@ -446,16 +447,18 @@ public class DriverCLI {
       environment.setSourcePath(sourcePath);
     }
   
-    if (line.hasOption("d"))
-      environment.setCompileBin(pathArgument(line.getOptionValue("d")));
+    Path targetDir = new AbsolutePath(".");
+    if (line.hasOption("d")) {
+      targetDir = pathArgument(line.getOptionValue("d"));
+    }
     
     if (line.hasOption("cache"))
       environment.setCacheDir(pathArgument(line.getOptionValue("cache")));
   
-    if (line.hasOption("gen-files")) {
-      environment.setMode(CompilerMode.instance);
-      environment.setBin(environment.getCompileBin());
-    }
+    if (line.hasOption("gen-files"))
+      environment.setMode(new CompilerMode(targetDir, false));
+    else
+      environment.setMode(new EditorMode());
     
     if (line.hasOption("atomic-imports"))
       environment.setAtomicImportParsing(true);

@@ -58,7 +58,6 @@ import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
-import org.sugarj.driver.Result.CompilerMode;
 import org.sugarj.driver.caching.ModuleKeyCache;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
@@ -279,9 +278,7 @@ public class Driver {
     
     RelativePath sourceFile1 = getSourceFile();
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
-    Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
-    Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
-    Path dep = params.env.<Result>getMode() == CompilerMode.instance ? compileDep : parseDep;
+    Path dep = new RelativePath(params.env.getBin(), depPath);
     
     this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, Collections.singletonMap(getSourceFile(), FileCommands.fileHash(getSourceFile())), dep);
     imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
@@ -799,15 +796,14 @@ public class Driver {
     if (modulePath.startsWith("org/sugarj"))
       return false;
     
-    Path compileDep = new RelativePath(params.env.getCompileBin(), modulePath + ".dep");
-    Path editedDep = new RelativePath(params.env.getParseBin(), modulePath + ".dep");
-    Result result = Result.readConsistent(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), params.editedSourceStamps, compileDep, editedDep);
+    Path dep = new RelativePath(params.env.getBin(), modulePath + ".dep");
+    Result result = Result.readConsistent(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), params.editedSourceStamps, dep);
     boolean consistent;
     if (result != null) {
       consistent = true;
     }
     else {
-      result = Result.read(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), compileDep, editedDep);
+      result = Result.read(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), dep);
       consistent = false;
     }
     
@@ -1009,9 +1005,7 @@ public class Driver {
     
     RelativePath sourceFile1 = getSourceFile();
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
-    Path compileDep = new RelativePath(params.env.getCompileBin(), depPath);
-    Path parseDep = new RelativePath(params.env.getParseBin(), depPath);
-    Path dep = params.env.forEditor() ? parseDep : compileDep;
+    Path dep = new RelativePath(params.env.getBin(), depPath);
     this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, sourceArtifacts, dep);
     
     driverResult.setState(state);
