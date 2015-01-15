@@ -51,6 +51,7 @@ import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
 import org.sugarj.common.cleardep.CompilationUnit;
+import org.sugarj.common.cleardep.Mode;
 import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
@@ -796,14 +797,14 @@ public class Driver {
     if (modulePath.startsWith("org/sugarj"))
       return false;
     
-    Path dep = new RelativePath(params.env.getBin(), modulePath + ".dep");
-    Result result = Result.readConsistent(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), params.editedSourceStamps, dep);
+    Mode<Result> reqmode = params.env.<Result>getMode().getModeForRequiredModules();
+    Result result = ModuleSystemCommands.locateConsistentResult(modulePath, params.env, reqmode, params.editedSourceStamps);
     boolean consistent;
     if (result != null) {
       consistent = true;
     }
     else {
-      result = Result.read(params.env.getStamper(), params.env.<Result>getMode().getModeForRequiredModules(), dep);
+      result = ModuleSystemCommands.locateResult(modulePath, params.env, reqmode);
       consistent = false;
     }
     

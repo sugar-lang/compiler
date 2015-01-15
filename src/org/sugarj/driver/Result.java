@@ -283,10 +283,6 @@ public class Result extends CompilationUnit {
 //    }
 //  }
   
-  public static Result read(Stamper stamper, Path p) throws ClassNotFoundException, IOException {
-    return read(Result.class, stamper, p);
-  }
-  
   public static Result read(Stamper stamper, Mode<Result> mode, Path... deps) throws IOException {
     return CompilationUnit.read(Result.class, stamper, mode, deps);
   }
@@ -324,7 +320,7 @@ public class Result extends CompilationUnit {
 
     @Override
     public boolean canAccept(Result e) {
-      return e.getMode() == this;
+      return e.getMode() instanceof CompilerMode;
     }
 
     @Override

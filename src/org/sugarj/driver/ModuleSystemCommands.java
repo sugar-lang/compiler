@@ -10,6 +10,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
+import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
 import org.sugarj.common.ATermCommands;
@@ -236,6 +237,24 @@ public class ModuleSystemCommands {
       dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
       result = Result.read(env.getStamper(), mode, dep);
+      if (result != null)
+        return result;
+    }
+    
+    return null;
+  }
+  
+  public static Result locateConsistentResult(String modulePath, Environment env, Mode<Result> mode, Map<RelativePath, Integer> sourceFiles) throws IOException {
+    RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
+    
+    Result result = Result.readConsistent(env.getStamper(), mode, sourceFiles, dep);
+    if (result != null)
+      return result;
+    
+    for (Path base : env.getIncludePath()) {
+      dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
+      
+      result = Result.readConsistent(env.getStamper(), mode, sourceFiles, dep);
       if (result != null)
         return result;
     }
