@@ -277,11 +277,17 @@ public class Driver {
     if (params.sourceFilePaths.size() != 1) 
       throw new IllegalArgumentException("Cannot yet handle driver calls with more than one source file; FIXME");
     
-    RelativePath sourceFile1 = getSourceFile();
-    String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
+    RelativePath sourceFile = getSourceFile();
+    String depPath = FileCommands.dropExtension(sourceFile.getRelativePath()) + ".dep";
     Path dep = new RelativePath(params.env.getBin(), depPath);
     
-    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, Collections.singletonMap(getSourceFile(), FileCommands.fileHash(getSourceFile())), dep);
+    Integer sourceFileStamp;
+    if (params.editedSourceStamps.containsKey(sourceFile))
+      sourceFileStamp = params.editedSourceStamps.get(sourceFile);
+    else
+      sourceFileStamp = params.env.getStamper().stampOf(sourceFile);
+    
+    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, Collections.singletonMap(sourceFile, sourceFileStamp), dep);
     imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
 
     baseProcessor.init(params.sourceFilePaths, params.env);
@@ -827,7 +833,7 @@ public class Driver {
       log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
       baseProcessor.processModuleImport(toplevelDecl);
       circularLinks.add(importSourceFiles);
-      driverResult.addModuleDependency(circularResult);
+      driverResult.addCircularModuleDependency(circularResult);
       return true;
     }
     
@@ -1531,5 +1537,10 @@ public class Driver {
   
   public DriverParameters getParameters() {
     return params;
+  }
+  
+  @Override
+  public String toString() {
+    return "Driver(" + params.sourceFilePaths + ")";
   }
 }
