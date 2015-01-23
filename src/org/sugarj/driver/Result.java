@@ -242,8 +242,8 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-    super.readEntity(ois);
+  protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
+    super.readEntity(ois, stamper);
     mode = (Mode<?>) ois.readObject();
     transitivelyAffectedFiles = null;
 //    editorServices = (List<IStrategoTerm>) ois.readObject();

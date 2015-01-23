@@ -407,7 +407,7 @@ public class Driver {
 
       if (!interrupt) {
         driverResult.setState(success ? CompilationUnit.State.SUCCESS : CompilationUnit.State.FAILURE);
-        driverResult.write();
+        driverResult.write(params.env.getStamper());
       } else {
         driverResult.setState(CompilationUnit.State.SUCCESS);
         driverResult.setSugaredSyntaxTree(null);
