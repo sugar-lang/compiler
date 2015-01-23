@@ -18,6 +18,7 @@ import org.sugarj.common.FileCommands;
 import org.sugarj.common.TargettedMode;
 import org.sugarj.common.cleardep.CompilationUnit;
 import org.sugarj.common.cleardep.Mode;
+import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.path.Path;
@@ -41,7 +42,7 @@ public class Result extends CompilationUnit {
   /**
    * Transitive closure (over module dependencies) of required and generated files.
    */
-  transient private Map<Path, Integer> transitivelyAffectedFiles;
+  transient private Map<Path, Stamp> transitivelyAffectedFiles;
 
   /**
    * maps from source artifacts to generated source files 
@@ -65,13 +66,13 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  public void addExternalFileDependency(Path file, int stampOfFile) {
+  public void addExternalFileDependency(Path file, Stamp stampOfFile) {
     super.addExternalFileDependency(file, stampOfFile);
     getTransitivelyAffectedFileStamps().put(file, stampOfFile);
   }
   
   @Override
-  public void addGeneratedFile(Path file, int stampOfFile) {
+  public void addGeneratedFile(Path file, Stamp stampOfFile) {
     super.addGeneratedFile(file, stampOfFile);
     getTransitivelyAffectedFileStamps().put(file, stampOfFile);
   }
@@ -83,9 +84,9 @@ public class Result extends CompilationUnit {
       getTransitivelyAffectedFileStamps().putAll(((Result) mod).getTransitivelyAffectedFileStamps());
   }
 
-  private Map<Path, Integer> getTransitivelyAffectedFileStamps() {
+  private Map<Path, Stamp> getTransitivelyAffectedFileStamps() {
     if (transitivelyAffectedFiles == null) {
-      final Map<Path, Integer> deps = new HashMap<>();
+      final Map<Path, Stamp> deps = new HashMap<>();
       
       ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
         @Override public Void visit(CompilationUnit mod, Mode<?> mode) {
@@ -287,11 +288,11 @@ public class Result extends CompilationUnit {
     return CompilationUnit.read(Result.class, stamper, mode, deps);
   }
   
-  public static Result readConsistent(Stamper stamper, Mode<Result> mode, Map<RelativePath, Integer> sourceFiles, Path... deps) throws IOException {
+  public static Result readConsistent(Stamper stamper, Mode<Result> mode, Map<RelativePath, Stamp> sourceFiles, Path... deps) throws IOException {
     return CompilationUnit.readConsistent(Result.class, stamper, mode, sourceFiles, deps);
   }
 
-  public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Map<RelativePath, Integer> sourceFiles, Path dep) throws IOException {
+  public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Map<RelativePath, Stamp> sourceFiles, Path dep) throws IOException {
     return CompilationUnit.create(Result.class, stamper, mode, syn, sourceFiles, dep);
   }
   

@@ -52,6 +52,7 @@ import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
 import org.sugarj.common.cleardep.CompilationUnit;
 import org.sugarj.common.cleardep.Mode;
+import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
@@ -281,7 +282,7 @@ public class Driver {
     String depPath = FileCommands.dropExtension(sourceFile.getRelativePath()) + ".dep";
     Path dep = new RelativePath(params.env.getBin(), depPath);
     
-    Integer sourceFileStamp;
+    Stamp sourceFileStamp;
     if (params.editedSourceStamps.containsKey(sourceFile))
       sourceFileStamp = params.editedSourceStamps.get(sourceFile);
     else
@@ -825,7 +826,7 @@ public class Driver {
     }
 
     boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-    boolean requiresUpdate = result == null || !consistent || !result.isFinished();
+    boolean requiresUpdate = result == null || !consistent;
     
     Result circularResult = getCircularImportResult(importSourceFiles);
     if (circularResult != null) {
@@ -994,11 +995,11 @@ public class Driver {
     Set<CompilationUnit> circularDepdencnies = new HashSet<>(driverResult.getCircularModuleDependencies());
     Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
     Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies());
-    Integer interfaceHash = driverResult.getInterfaceHash();
+    Stamp interfaceHash = driverResult.getInterfaceHash();
     Set<RelativePath> sourceFiles = driverResult.getSourceArtifacts();
-    Map<RelativePath, Integer> sourceArtifacts = new HashMap<>();
+    Map<RelativePath, Stamp> sourceArtifacts = new HashMap<>();
     for (RelativePath sourceFile : sourceFiles)
-      sourceArtifacts.put(sourceFile, FileCommands.fileHash(sourceFile));
+      sourceArtifacts.put(sourceFile, params.env.getStamper().stampOf(sourceFile));
 
     // TODO Declare a synthesizer?
     Result modelResult = subcompile(thisModelPath, null);

@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
+import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
@@ -31,7 +32,7 @@ public class ModuleKey implements Externalizable {
 
   private boolean checkGet;
   
-  public Map<String, Integer> moduleDeps;
+  public Map<String, Stamp> moduleDeps;
   public String body;
   
   /**
@@ -39,7 +40,7 @@ public class ModuleKey implements Externalizable {
    */
   public ModuleKey() {}
   
-  public ModuleKey(Map<String, Integer> moduleDeps, String body) {
+  public ModuleKey(Map<String, Stamp> moduleDeps, String body) {
     this.moduleDeps = moduleDeps;
     this.body = body;
   }
@@ -82,7 +83,7 @@ public class ModuleKey implements Externalizable {
     moduleDeps = new HashMap<>();
     int entries = in.readInt();
     for (int i = 0; i < entries; i++) {
-      moduleDeps.put((String) in.readObject(), in.readInt());
+      moduleDeps.put((String) in.readObject(), (Stamp) in.readObject());
     }
     
     body = (String) in.readObject();
@@ -91,9 +92,9 @@ public class ModuleKey implements Externalizable {
   @Override
   public void writeExternal(ObjectOutput out) throws IOException {
     out.writeInt(moduleDeps.size());
-    for (Entry<String, Integer> entry : moduleDeps.entrySet()) {
+    for (Entry<String, Stamp> entry : moduleDeps.entrySet()) {
       out.writeObject(entry.getKey());
-      out.writeInt(entry.getValue());
+      out.writeObject(entry.getValue());
     }
     
     out.writeObject(body);

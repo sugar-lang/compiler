@@ -18,6 +18,7 @@ import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.cleardep.Mode;
+import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 
@@ -244,7 +245,7 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateConsistentResult(String modulePath, Environment env, Mode<Result> mode, Map<RelativePath, Integer> sourceFiles) throws IOException {
+  public static Result locateConsistentResult(String modulePath, Environment env, Mode<Result> mode, Map<RelativePath, Stamp> sourceFiles) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
     Result result = Result.readConsistent(env.getStamper(), mode, sourceFiles, dep);

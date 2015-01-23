@@ -43,6 +43,8 @@ import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.FilteringIOAgent;
 import org.sugarj.common.Log;
+import org.sugarj.common.cleardep.ContentHashStamper;
+import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.driver.caching.ModuleKey;
@@ -108,8 +110,8 @@ public class SDFCommands {
     }));
     
     for (Path grammarFile : baseLanguageGrammars) {
-      Map<String, Integer> map = new HashMap<String, Integer>();
-      map.put(grammarFile.getAbsolutePath(), FileCommands.fileHash(grammarFile));
+      Map<String, Stamp> map = new HashMap<String, Stamp>();
+      map.put(grammarFile.getAbsolutePath(), ContentHashStamper.instance.stampOf(grammarFile));
       ModuleKey key = new ModuleKey(map, ""); 
       Path permissiveGrammar = lookupGrammarInCache(sdfCache, key);
       if (permissiveGrammar == null) {

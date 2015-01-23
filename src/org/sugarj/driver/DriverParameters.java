@@ -12,6 +12,7 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
+import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
@@ -47,7 +48,7 @@ public class DriverParameters {
    * Stamps of the source files.
    * `editedSourceStamps.keySet() == editedSources.keySet()`
    */
-  public final Map<RelativePath, Integer> editedSourceStamps;
+  public final Map<RelativePath, Stamp> editedSourceStamps;
   
   /**
    * Provides toplevel declarations for all source files.
@@ -75,14 +76,14 @@ public class DriverParameters {
   public final Synthesizer syn;
   
   public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor) throws IOException {
-    return create(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Integer>emptyMap(), new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, null);
+    return create(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Stamp>emptyMap(), new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, null);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, IProgressMonitor monitor) throws IOException {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, IProgressMonitor monitor) throws IOException {
     return create(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, null);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
     String source = editedSources.get(sourceFile);
     if (source == null)
       source = FileCommands.readFileAsString(sourceFile);
@@ -100,7 +101,7 @@ public class DriverParameters {
         syn);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Integer> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
+  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
     return new DriverParameters(
         env,
         baseLang,
@@ -119,7 +120,7 @@ public class DriverParameters {
       AbstractBaseLanguage baseLang,
       Set<RelativePath> sourceFilePaths,
       Map<RelativePath, String> sourceFiles,
-      Map<RelativePath, Integer> sourceStamps,
+      Map<RelativePath, Stamp> sourceStamps,
       ToplevelDeclarationProvider declProvider, 
       List<Driver> currentlyProcessing,
       List<FromTo> renamings,
@@ -143,7 +144,7 @@ public class DriverParameters {
       AbstractBaseLanguage baseLang,
       Set<RelativePath> sourceFilePaths,
       Map<RelativePath, String> sourceFiles,
-      Map<RelativePath, Integer> sourceStamps,
+      Map<RelativePath, Stamp> sourceStamps,
       ToplevelDeclarationProvider declProvider, 
       List<Driver> currentlyProcessing,
       List<FromTo> renamings,
