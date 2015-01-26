@@ -43,6 +43,10 @@ import org.strategoxt.HybridInterpreter;
 import org.strategoxt.lang.StrategoException;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.AbstractBaseProcessor;
+import org.sugarj.cleardep.CompilationUnit;
+import org.sugarj.cleardep.Mode;
+import org.sugarj.cleardep.Synthesizer;
+import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.ATermCommands.PrettyPrintError;
 import org.sugarj.common.CommandExecution;
@@ -50,10 +54,6 @@ import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
-import org.sugarj.common.cleardep.CompilationUnit;
-import org.sugarj.common.cleardep.Mode;
-import org.sugarj.common.cleardep.Stamp;
-import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.errors.SourceCodeException;
 import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
@@ -997,7 +997,6 @@ public class Driver {
     Set<CompilationUnit> circularDepdencnies = new HashSet<>(driverResult.getCircularModuleDependencies());
     Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
     Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies());
-    Stamp interfaceHash = driverResult.getInterfaceHash();
     Set<RelativePath> sourceFiles = driverResult.getSourceArtifacts();
 
     // TODO Declare a synthesizer?
@@ -1026,7 +1025,6 @@ public class Driver {
       driverResult.addGeneratedFile(p);
     for (Path p : externalFileDependencies)
       driverResult.addExternalFileDependency(p);
-    driverResult.setInterfaceHash(interfaceHash);
     
     generateModel();
   }

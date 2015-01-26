@@ -11,10 +11,10 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
+import org.sugarj.cleardep.stamp.Stamp;
+import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
-import org.sugarj.common.cleardep.Stamp;
-import org.sugarj.common.cleardep.Stamper;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 

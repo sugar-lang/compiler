@@ -13,12 +13,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
+import org.sugarj.cleardep.Mode;
+import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
-import org.sugarj.common.cleardep.Mode;
-import org.sugarj.common.cleardep.Stamp;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 

@@ -13,14 +13,14 @@ import java.util.Set;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
+import org.sugarj.cleardep.CompilationUnit;
+import org.sugarj.cleardep.Mode;
+import org.sugarj.cleardep.Synthesizer;
+import org.sugarj.cleardep.stamp.Stamp;
+import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.TargettedMode;
-import org.sugarj.common.cleardep.CompilationUnit;
-import org.sugarj.common.cleardep.Mode;
-import org.sugarj.common.cleardep.Stamp;
-import org.sugarj.common.cleardep.Stamper;
-import org.sugarj.common.cleardep.Synthesizer;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 
@@ -203,10 +203,6 @@ public class Result extends CompilationUnit {
   
   public Path getDesugaringsFile() {
     return desugaringsFile;
-  }
-  
-  public Path getPersistentPath() {
-    return persistentPath;
   }
   
   public boolean isGenerated() {
