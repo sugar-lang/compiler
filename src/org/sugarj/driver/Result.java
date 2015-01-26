@@ -292,8 +292,8 @@ public class Result extends CompilationUnit {
     return CompilationUnit.readConsistent(Result.class, stamper, mode, sourceFiles, deps);
   }
 
-  public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Map<RelativePath, Stamp> sourceFiles, Path dep) throws IOException {
-    return CompilationUnit.create(Result.class, stamper, mode, syn, sourceFiles, dep);
+  public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Path dep) throws IOException {
+    return CompilationUnit.create(Result.class, stamper, mode, syn, dep);
   }
   
   public static class CompilerMode implements TargettedMode<Result> {

@@ -288,7 +288,9 @@ public class Driver {
     else
       sourceFileStamp = params.env.getStamper().stampOf(sourceFile);
     
-    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, Collections.singletonMap(sourceFile, sourceFileStamp), dep);
+    driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, dep);
+    driverResult.addSourceArtifact(sourceFile, sourceFileStamp);
+    
     imp = new ImportCommands(baseProcessor, params.env, this, params, driverResult, str);
 
     baseProcessor.init(params.sourceFilePaths, params.env);
@@ -997,9 +999,6 @@ public class Driver {
     Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies());
     Stamp interfaceHash = driverResult.getInterfaceHash();
     Set<RelativePath> sourceFiles = driverResult.getSourceArtifacts();
-    Map<RelativePath, Stamp> sourceArtifacts = new HashMap<>();
-    for (RelativePath sourceFile : sourceFiles)
-      sourceArtifacts.put(sourceFile, params.env.getStamper().stampOf(sourceFile));
 
     // TODO Declare a synthesizer?
     Result modelResult = subcompile(thisModelPath, null);
@@ -1014,9 +1013,11 @@ public class Driver {
     RelativePath sourceFile1 = getSourceFile();
     String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
     Path dep = new RelativePath(params.env.getBin(), depPath);
-    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, sourceArtifacts, dep);
+    this.driverResult = Result.create(params.env.getStamper(), params.env.<Result>getMode(), params.syn, dep);
     
     driverResult.setState(state);
+    for (RelativePath sourceFile : sourceFiles)
+      driverResult.addSourceArtifact(sourceFile);
     for (CompilationUnit cu : dependencies)
       driverResult.addModuleDependency(cu);
     for (CompilationUnit cu : circularDepdencnies)
