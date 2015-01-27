@@ -206,10 +206,7 @@ public class Result extends CompilationUnit {
   }
   
   public boolean isGenerated() {
-    for (RelativePath sourceFile : getSourceArtifacts())
-      if (sourceFile != null && "model".equals(FileCommands.getExtension(sourceFile)))
-        return true;
-    return false;
+    return getSynthesizer() != null;
   }
 
   public Set<Path> getDeferredSourceFiles() {
