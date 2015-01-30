@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
+import org.sugarj.cleardep.CompilationUnit;
 import org.sugarj.cleardep.Mode;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
@@ -230,14 +231,14 @@ public class ModuleSystemCommands {
   public static Result locateResult(String modulePath, Environment env, Mode<Result> mode) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.read(env.getStamper(), mode, dep);
+    Result result = Result.read(dep);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.read(env.getStamper(), mode, dep);
+      result = Result.read(dep);
       if (result != null)
         return result;
     }
@@ -248,14 +249,14 @@ public class ModuleSystemCommands {
   public static Result locateConsistentResult(String modulePath, Environment env, Mode<Result> mode, Map<RelativePath, Stamp> sourceFiles) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.readConsistent(env.getStamper(), mode, sourceFiles, dep);
+    Result result = Result.readConsistent(mode, sourceFiles, dep);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.readConsistent(env.getStamper(), mode, sourceFiles, dep);
+      result = Result.readConsistent(mode, sourceFiles, dep);
       if (result != null)
         return result;
     }

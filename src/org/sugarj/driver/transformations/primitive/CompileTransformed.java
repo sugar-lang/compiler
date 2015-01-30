@@ -157,7 +157,7 @@ class CompileTransformed extends AbstractPrimitive {
           // transformations may generate other artifacts, given that their dependencies in turn are marked in the current result
           Path dep = new AbsolutePath(FileCommands.dropExtension(p.getAbsolutePath()) + ".dep");
           if (FileCommands.exists(dep)) {
-            pRes = Result.read(environment.getStamper(), environment.<Result>getMode(), dep);
+            pRes = Result.read(dep);
             if (pRes != null && pRes.isGenerated()) {
               boolean isContained = transformedModelDeps.containsAll(pRes.getCircularFileDependencies());
               ok = isContained;

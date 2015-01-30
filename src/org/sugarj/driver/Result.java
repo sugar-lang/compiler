@@ -22,7 +22,6 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.TargettedMode;
 import org.sugarj.common.path.Path;
-import org.sugarj.common.path.RelativePath;
 
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
@@ -235,8 +234,8 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
-    super.readEntity(ois, stamper);
+  protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
+    super.readEntity(ois);
     mode = (Mode<?>) ois.readObject();
     transitivelyAffectedFiles = null;
 //    editorServices = (List<IStrategoTerm>) ois.readObject();
@@ -277,14 +276,6 @@ public class Result extends CompilationUnit {
 //    }
 //  }
   
-  public static Result read(Stamper stamper, Mode<Result> mode, Path... deps) throws IOException {
-    return CompilationUnit.read(Result.class, stamper, mode, deps);
-  }
-  
-  public static Result readConsistent(Stamper stamper, Mode<Result> mode, Map<RelativePath, Stamp> sourceFiles, Path... deps) throws IOException {
-    return CompilationUnit.readConsistent(Result.class, stamper, mode, sourceFiles, deps);
-  }
-
   public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Path dep) throws IOException {
     return CompilationUnit.create(Result.class, stamper, mode, syn, dep);
   }
