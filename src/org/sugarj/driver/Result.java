@@ -15,6 +15,7 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.cleardep.CompilationUnit;
 import org.sugarj.cleardep.Mode;
+import org.sugarj.cleardep.PersistableEntity;
 import org.sugarj.cleardep.Synthesizer;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.cleardep.stamp.Stamper;
@@ -275,6 +276,14 @@ public class Result extends CompilationUnit {
 //      compiled.deferredSourceFiles.put(e.getKey(), newVal);
 //    }
 //  }
+  
+  public static Result read(Path dep) throws IOException {
+    return PersistableEntity.read(Result.class, dep);
+  }
+  
+  public static Result readConsistent(Mode<Result> mode, Map<? extends Path, Stamp> editedSourceFiles, Path... deps) throws IOException {
+    return CompilationUnit.readConsistent(Result.class, mode, editedSourceFiles, deps);
+  }
   
   public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Path dep) throws IOException {
     return CompilationUnit.create(Result.class, stamper, mode, syn, dep);
