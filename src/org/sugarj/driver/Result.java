@@ -21,7 +21,6 @@ import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
-import org.sugarj.common.TargettedMode;
 import org.sugarj.common.path.Path;
 
 /**

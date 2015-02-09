@@ -8,9 +8,9 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.imploder.IToken;
 import org.spoofax.jsglr.client.imploder.ImploderAttachment;
 import org.sugarj.common.ATermCommands;
-import org.sugarj.common.Environment;
 import org.sugarj.common.path.Path;
 import org.sugarj.driver.Driver;
+import org.sugarj.driver.Environment;
 
 /**
  * @author jp

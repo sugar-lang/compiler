@@ -50,7 +50,6 @@ import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.ATermCommands.PrettyPrintError;
 import org.sugarj.common.CommandExecution;
-import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;

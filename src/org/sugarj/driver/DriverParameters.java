@@ -12,7 +12,6 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.cleardep.Synthesizer;
 import org.sugarj.cleardep.stamp.Stamp;
-import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;

@@ -361,7 +361,7 @@ public class DriverCLI {
    * @throws CLIError
    *         when the command line is not correct
    */
-  public static String[] handleOptions(String[] args, org.sugarj.common.Environment environment) {
+  public static String[] handleOptions(String[] args, org.sugarj.driver.Environment environment) {
     Options options = specifyOptions();
   
     try {
@@ -394,7 +394,7 @@ public class DriverCLI {
     return new AbsolutePath(path);
   }
 
-  private static String[] processOptions(Options options, CommandLine line, org.sugarj.common.Environment environment) throws org.apache.commons.cli.ParseException {
+  private static String[] processOptions(Options options, CommandLine line, org.sugarj.driver.Environment environment) throws org.apache.commons.cli.ParseException {
     if (line.hasOption("help"))
       throw new CLIError("help requested", options);
   

@@ -8,7 +8,6 @@ import java.util.List;
 import org.spoofax.interpreter.library.ssl.StrategoHashMap;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.common.ATermCommands;
-import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.StringCommands;
 import org.sugarj.common.path.RelativePath;

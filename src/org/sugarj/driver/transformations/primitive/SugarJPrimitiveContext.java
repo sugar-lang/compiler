@@ -1,8 +1,8 @@
 package org.sugarj.driver.transformations.primitive;
 
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.sugarj.common.Environment;
 import org.sugarj.driver.Driver;
+import org.sugarj.driver.Environment;
 
 /**
  * @author seba

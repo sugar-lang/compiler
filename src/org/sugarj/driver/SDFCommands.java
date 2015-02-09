@@ -41,7 +41,6 @@ import org.strategoxt.tools.main_pack_sdf_0_0;
 import org.sugarj.cleardep.stamp.ContentHashStamper;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
-import org.sugarj.common.Environment;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.FilteringIOAgent;
 import org.sugarj.common.Log;

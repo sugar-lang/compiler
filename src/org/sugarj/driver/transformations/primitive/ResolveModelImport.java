@@ -8,8 +8,8 @@ import org.spoofax.interpreter.library.AbstractPrimitive;
 import org.spoofax.interpreter.stratego.Strategy;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.common.ATermCommands;
-import org.sugarj.common.Environment;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.driver.Environment;
 import org.sugarj.driver.ImportCommands;
 import org.sugarj.driver.ModuleSystemCommands;
 
