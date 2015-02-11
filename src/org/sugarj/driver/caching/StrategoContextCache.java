@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.strategoxt.lang.Context;
-import org.sugarj.util.Pair;
+import org.sugarj.common.util.Pair;
 
 /**
  * Manages instances of org.strategoxt.lang.Context to enable

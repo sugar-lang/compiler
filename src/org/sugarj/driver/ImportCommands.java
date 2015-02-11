@@ -21,8 +21,8 @@ import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.common.util.Pair;
 import org.sugarj.driver.Renaming.FromTo;
-import org.sugarj.util.Pair;
 
 /**
  * @author seba

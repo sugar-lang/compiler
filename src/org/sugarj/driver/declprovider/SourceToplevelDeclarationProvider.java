@@ -19,11 +19,11 @@ import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.Path;
+import org.sugarj.common.util.Pair;
 import org.sugarj.driver.Driver;
 import org.sugarj.driver.IncrementalParseResult;
 import org.sugarj.driver.RetractableTokenizer;
 import org.sugarj.driver.RetractableTreeBuilder;
-import org.sugarj.util.Pair;
 
 public class SourceToplevelDeclarationProvider implements ToplevelDeclarationProvider {
 

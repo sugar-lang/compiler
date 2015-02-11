@@ -58,13 +58,13 @@ import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.common.util.Pair;
 import org.sugarj.driver.Renaming.FromTo;
 import org.sugarj.driver.caching.ModuleKeyCache;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
 import org.sugarj.stdlib.StdLib;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
-import org.sugarj.util.Pair;
 import org.sugarj.util.ProcessingListener;
 
 
