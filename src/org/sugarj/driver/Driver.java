@@ -835,7 +835,7 @@ public class Driver {
       log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
       baseProcessor.processModuleImport(toplevelDecl);
       circularLinks.add(importSourceFiles);
-      driverResult.addCircularModuleDependency(circularResult);
+      driverResult.addModuleDependency(circularResult);
       return true;
     }
     
@@ -993,7 +993,6 @@ public class Driver {
 
     CompilationUnit.State state = driverResult.getState();
     Set<CompilationUnit> dependencies = new HashSet<>(driverResult.getModuleDependencies());
-    Set<CompilationUnit> circularDepdencnies = new HashSet<>(driverResult.getCircularModuleDependencies());
     Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
     Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies());
     Set<RelativePath> sourceFiles = driverResult.getSourceArtifacts();
@@ -1004,7 +1003,6 @@ public class Driver {
     if (modelResult.hasFailed())
       state = CompilationUnit.State.FAILURE;
     dependencies.addAll(modelResult.getModuleDependencies());
-    circularDepdencnies.addAll(modelResult.getCircularModuleDependencies());
     generatedFiles.addAll(modelResult.getGeneratedFiles());
     externalFileDependencies.addAll(modelResult.getExternalFileDependencies()); 
     
@@ -1017,8 +1015,6 @@ public class Driver {
     for (RelativePath sourceFile : sourceFiles)
       driverResult.addSourceArtifact(sourceFile);
     for (CompilationUnit cu : dependencies)
-      driverResult.addModuleDependency(cu);
-    for (CompilationUnit cu : circularDepdencnies)
       driverResult.addModuleDependency(cu);
     for (Path p : generatedFiles)
       driverResult.addGeneratedFile(p);

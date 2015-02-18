@@ -169,7 +169,6 @@ public class ImportCommands {
   private void checkCommunicationIntegrity(Result transformedModelResult, IStrategoTerm toplevelDecl) {
     Set<CompilationUnit> usedModules = new HashSet<>();
     usedModules.addAll(transformedModelResult.getModuleDependencies());
-    usedModules.addAll(transformedModelResult.getCircularModuleDependencies());
 
     if (transformedModelResult.getSynthesizer() == null)
       throw new IllegalArgumentException("Argument " + transformedModelResult + " must be a generated module with getSynthesizer() != null");
@@ -177,7 +176,6 @@ public class ImportCommands {
     Set<CompilationUnit> allowedModules = new HashSet<>(transformedModelResult.getSynthesizer().generatorModules);
     for (CompilationUnit mod : transformedModelResult.getSynthesizer().generatorModules) {
       allowedModules.addAll(mod.getModuleDependencies());
-      allowedModules.addAll(mod.getCircularModuleDependencies());
     }
     
     Set<CompilationUnit> hiddenDependencies = new HashSet<>();
