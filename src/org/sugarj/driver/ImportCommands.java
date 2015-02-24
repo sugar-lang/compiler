@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import javax.sound.midi.Synthesizer;
+
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.client.InvalidParseTableException;
 import org.spoofax.jsglr.shared.BadTokenException;
@@ -15,7 +17,6 @@ import org.spoofax.jsglr.shared.TokenExpectedException;
 import org.strategoxt.lang.StrategoException;
 import org.sugarj.AbstractBaseProcessor;
 import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.Synthesizer;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
@@ -32,18 +33,18 @@ public class ImportCommands {
   private AbstractBaseProcessor baseProcessor;
   private Environment environment;
   private Driver driver;
-  private DriverParameters params;
+  private DriverInput input;
   private Result driverResult;
   private STRCommands str;
   
   private String currentTransName;
   private String currentModelName;
   
-  public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, DriverParameters params, Result driverResult, STRCommands str) {
+  public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, DriverInput input, Result driverResult, STRCommands str) {
     this.baseProcessor = baseProcessor;
     this.environment = environment;
     this.driver = driver;
-    this.params = params;
+    this.input = input;
     this.driverResult = driverResult;
     this.str = str;
   }

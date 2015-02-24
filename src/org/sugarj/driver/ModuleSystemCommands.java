@@ -13,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
-import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.Mode;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
@@ -245,17 +243,17 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateConsistentResult(String modulePath, Environment env, Mode<Result> mode, Map<RelativePath, Stamp> sourceFiles) throws IOException {
+  public static Result locateConsistentResult(String modulePath, Environment env, Map<RelativePath, Stamp> sourceFiles) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.readConsistent(mode, sourceFiles, dep);
+    Result result = Result.readConsistent(sourceFiles, dep);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.readConsistent(mode, sourceFiles, dep);
+      result = Result.readConsistent(sourceFiles, dep);
       if (result != null)
         return result;
     }

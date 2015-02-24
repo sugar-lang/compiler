@@ -14,9 +14,8 @@ import java.util.Set;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
 import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.Mode;
 import org.sugarj.cleardep.PersistableEntity;
-import org.sugarj.cleardep.Synthesizer;
+import org.sugarj.cleardep.build.BuildRequirement;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
@@ -77,8 +76,8 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  public void addModuleDependency(CompilationUnit mod) {
-    super.addModuleDependency(mod);
+  public void addModuleDependency(CompilationUnit mod, BuildRequirement<?, ?, ?, ?> req) {
+    super.addModuleDependency(mod, req);
     if (mod instanceof Result)
       getTransitivelyAffectedFileStamps().putAll(((Result) mod).getTransitivelyAffectedFileStamps());
   }
@@ -88,7 +87,7 @@ public class Result extends CompilationUnit {
       final Map<Path, Stamp> deps = new HashMap<>();
       
       ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
-        @Override public Void visit(CompilationUnit mod, Mode<?> mode) {
+        @Override public Void visit(CompilationUnit mod) {
           deps.putAll(((Result) mod).generatedFiles); 
           deps.putAll(((Result) mod).externalFileDependencies);
           return null;
@@ -205,7 +204,7 @@ public class Result extends CompilationUnit {
   }
   
   public boolean isGenerated() {
-    return getSynthesizer() != null;
+    return getGeneratedBy()...;
   }
 
   public Set<Path> getDeferredSourceFiles() {
@@ -215,158 +214,22 @@ public class Result extends CompilationUnit {
     return res;
   }
 
-
   @Override
-  protected void writeEntity(ObjectOutputStream oos) throws IOException {
-    super.writeEntity(oos);
-    oos.writeObject(mode);
-//    oos.writeObject(editorServices = Collections.unmodifiableList(editorServices));
-//    oos.writeObject(collectedErrors = Collections.unmodifiableList(collectedErrors));
-//    oos.writeObject(parseErrors = Collections.unmodifiableSet(parseErrors));
-//    oos.writeObject(sugaredSyntaxTree);
-//    oos.writeObject(AnalysisDataAttachment.getAnalysisData(sugaredSyntaxTree));
-//    oos.writeObject(desugaredSyntaxTree);
-//    oos.writeObject(parseTableFile);
-//    oos.writeObject(desugaringsFile);
-//    oos.writeBoolean(failed);
-//    oos.writeObject(deferredSourceFiles);
-//    transitivelyAffectedFiles = null;
-  }
-  
-  @Override
-  protected void readEntity(ObjectInputStream ois) throws IOException, ClassNotFoundException {
-    super.readEntity(ois);
-    mode = (Mode<?>) ois.readObject();
+  protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
+    super.readEntity(ois, stamper);
     transitivelyAffectedFiles = null;
-//    editorServices = (List<IStrategoTerm>) ois.readObject();
-//    collectedErrors = (List<String>) ois.readObject();
-//    parseErrors = (Set<BadTokenException>) ois.readObject();
-//    sugaredSyntaxTree = (IStrategoTerm) ois.readObject();
-//    Map<TermKey, Map<String, IStrategoTerm>> map = (Map<TermKey, Map<String, IStrategoTerm>>) ois.readObject();
-//    if (map != null)
-//      sugaredSyntaxTree.putAttachment(new AnalysisDataAttachment(map));
-//    desugaredSyntaxTree = (IStrategoTerm) ois.readObject();
-//    parseTableFile = (Path) ois.readObject();
-//    desugaringsFile = (Path) ois.readObject();
-//    failed = ois.readBoolean();
-//    deferredSourceFiles = (Map<Set<? extends Path>, Set<? extends Path>>) ois.readObject();
   }
-
-//  @Override
-//  protected void copyContentTo(CompilationUnit c) {
-//    super.copyContentTo(c);
-//    Result compiled = (Result) c;
-//    compiled.editorServices.addAll(editorServices);
-//    compiled.collectedErrors.addAll(collectedErrors);
-//    compiled.parseErrors.addAll(parseErrors);
-//    compiled.sugaredSyntaxTree = sugaredSyntaxTree;
-//    compiled.desugaredSyntaxTree = desugaredSyntaxTree;
-//    compiled.parseTableFile = parseTableFile;
-//    compiled.desugaringsFile = desugaringsFile;
-//    compiled.transitivelyAffectedFiles = null;
-//    
-//    for (Entry<Set<? extends Path>, Set<? extends Path>> e : deferredSourceFiles.entrySet()) {
-//      Set<RelativePath> newVal = new HashSet<>();
-//      for (Path p : e.getValue()) {
-//        RelativePath oldP = FileCommands.getRelativePath(targetDir, p);
-//        RelativePath newP = new RelativePath(compiled.targetDir, oldP.getRelativePath());
-//        newVal.add(newP);
-//      }
-//      compiled.deferredSourceFiles.put(e.getKey(), newVal);
-//    }
-//  }
   
   public static Result read(Path dep) throws IOException {
     return PersistableEntity.read(Result.class, dep);
   }
   
-  public static Result readConsistent(Mode<Result> mode, Map<? extends Path, Stamp> editedSourceFiles, Path... deps) throws IOException {
-    return CompilationUnit.readConsistent(Result.class, mode, editedSourceFiles, deps);
+  public static Result readConsistent(Map<? extends Path, Stamp> editedSourceFiles, Path dep, BuildRequirement<?, Result, ?, ?> generatedBy) throws IOException {
+    return CompilationUnit.readConsistent(Result.class, editedSourceFiles, dep, generatedBy);
   }
   
-  public static Result create(Stamper stamper, Mode<Result> mode, Synthesizer syn, Path dep) throws IOException {
-    return CompilationUnit.create(Result.class, stamper, mode, syn, dep);
-  }
-  
-  public static class CompilerMode implements TargettedMode<Result> {
-    private static final long serialVersionUID = -6029285930002846101L;
-    
-    private Path targetDir;
-    private boolean isTemporary;
-    
-    public CompilerMode() { /* for deserialization */ }
-    
-    public CompilerMode(Path targetDir, boolean isTemporary) {
-      this.targetDir = targetDir;
-      this.isTemporary = isTemporary;
-      try {
-        FileCommands.createDir(targetDir);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    
-    @Override
-    public Mode<Result> getModeForRequiredModules() {
-      return this;
-    }
-
-    @Override
-    public boolean canAccept(Result e) {
-      return e.getMode() instanceof CompilerMode;
-    }
-
-    @Override
-    public Result accept(Result e) {
-      return e;
-    }
-    
-    @Override
-    public Path getTargetDir() {
-      return targetDir;
-    }
-
-    @Override
-    public boolean isTemporary() {
-      return isTemporary;
-    }
-    
-    @Override
-    public String toString() {
-      return "CompilerMode(" + targetDir + ")";
-    }
-  }
-  
-  public static class EditorMode extends CompilerMode {
-    private static final long serialVersionUID = -8919402178703175221L;
-    
-    public EditorMode() {
-      this(FileCommands.tryNewTempDir(), true);
-    }
-    
-    public EditorMode(Path targetDir, boolean isTemporary) {
-      super(targetDir, isTemporary);
-    }
-    
-    @Override
-    public Mode<Result> getModeForRequiredModules() {
-      return new CompilerMode(getTargetDir(), true);
-    }
-
-    @Override
-    public boolean canAccept(Result e) {
-      return e.getDesugaringsFile() != null && FileCommands.exists(e.getDesugaringsFile());
-    }
-
-    @Override
-    public Result accept(Result e) {
-      return e;
-    }
-    
-    @Override
-    public String toString() {
-      return "EditorMode(" + getTargetDir() + ")";
-    }
-
+  public static Result create(Stamper stamper, Path dep, BuildRequirement<?, Result, ?, ?> generatedBy) throws IOException {
+    Result res = CompilationUnit.create(Result.class, stamper, dep, generatedBy);
+    return res;
   }
 }

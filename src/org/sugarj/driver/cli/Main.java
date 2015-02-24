@@ -14,7 +14,7 @@ import org.sugarj.common.Log;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
-import org.sugarj.driver.DriverParameters;
+import org.sugarj.driver.DriverInput;
 import org.sugarj.driver.Environment;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Result;
@@ -59,7 +59,7 @@ public class Main {
         if (null == lang)
           throw new RuntimeException("Unknown file extension \"" + FileCommands.getExtension(sourceFile) + "\".");
         
-        Result res = Driver.run(DriverParameters.create(environment, lang, sourceFile, monitor));
+        Result res = Driver.run(DriverInput.create(environment, lang, sourceFile, monitor));
     
         DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath());
         switch (returnValue) {

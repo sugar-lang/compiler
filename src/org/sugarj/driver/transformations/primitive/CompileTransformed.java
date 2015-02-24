@@ -18,7 +18,7 @@ import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Driver;
-import org.sugarj.driver.DriverParameters;
+import org.sugarj.driver.DriverInput;
 import org.sugarj.driver.Environment;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Renaming;
@@ -34,7 +34,7 @@ import org.sugarj.driver.Result;
 class CompileTransformed extends AbstractPrimitive {
 
   private Driver driver;
-  private DriverParameters params;
+  private DriverInput params;
   private Environment environment;
   
   public CompileTransformed(Driver driver, Environment environment) {

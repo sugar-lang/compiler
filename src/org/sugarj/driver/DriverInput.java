@@ -1,6 +1,7 @@
 package org.sugarj.driver;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -10,7 +11,6 @@ import java.util.Set;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.AbstractBaseLanguage;
-import org.sugarj.cleardep.Synthesizer;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.RelativePath;
@@ -22,7 +22,9 @@ import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 /**
  * @author Sebastian Erdweg
  */
-public class DriverParameters {
+public class DriverInput implements Serializable {
+  private static final long serialVersionUID = -8640182333713236865L;
+
   /**
    * Processing environment.
    */
@@ -69,39 +71,31 @@ public class DriverParameters {
    */
   public final IProgressMonitor monitor;
   
-  /**
-   * Synthesizer of module to process.
-   */
-  public final Synthesizer syn;
-  
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor) throws IOException {
-    return create(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Stamp>emptyMap(), new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, null);
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor) throws IOException {
+    this(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Stamp>emptyMap(), new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, IProgressMonitor monitor) throws IOException {
-    return create(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, null);
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, IProgressMonitor monitor) throws IOException {
+    this(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor);
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor) throws IOException {
     String source = editedSources.get(sourceFile);
     if (source == null)
       source = FileCommands.readFileAsString(sourceFile);
-    
-    return new DriverParameters(
-        env,
-        baseLang,
-        Collections.singleton(sourceFile),
-        Collections.singletonMap(sourceFile, source),
-        editedSourceStamps,
-        new SourceToplevelDeclarationProvider(source, sourceFile),
-        currentlyProcessing,
-        renamings,
-        monitor,
-        syn);
+    this.env = env;
+    this.baseLang = baseLang;
+    this.sourceFilePaths = Collections.singleton(sourceFile);
+    this.editedSources = Collections.singletonMap(sourceFile, source);
+    this.editedSourceStamps = editedSourceStamps;
+    this.declProvider = new SourceToplevelDeclarationProvider(source, sourceFile);
+    this.currentlyProcessing = currentlyProcessing;
+    this.renamings = renamings;
+    this.monitor = monitor;
   }
   
-  public static DriverParameters create(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, Synthesizer syn) throws IOException {
-    return new DriverParameters(
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor) throws IOException {
+    this(
         env,
         baseLang,
         Collections.singleton(sourceFile),
@@ -110,11 +104,10 @@ public class DriverParameters {
         new TermToplevelDeclarationProvider(termSource, sourceFile, env),
         currentlyProcessing,
         renamings,
-        monitor,
-        syn);
+        monitor);
   }
   
-  public static DriverParameters create(
+  public DriverInput(
       Environment env,
       AbstractBaseLanguage baseLang,
       Set<RelativePath> sourceFilePaths,
@@ -123,32 +116,7 @@ public class DriverParameters {
       ToplevelDeclarationProvider declProvider, 
       List<Driver> currentlyProcessing,
       List<FromTo> renamings,
-      IProgressMonitor monitor,
-      Synthesizer syn) {
-    return new DriverParameters(
-        env,
-        baseLang,
-        sourceFilePaths,
-        sourceFiles,
-        sourceStamps,
-        declProvider,
-        currentlyProcessing,
-        renamings,
-        monitor,
-        syn);
-  }
-  
-  private DriverParameters(
-      Environment env,
-      AbstractBaseLanguage baseLang,
-      Set<RelativePath> sourceFilePaths,
-      Map<RelativePath, String> sourceFiles,
-      Map<RelativePath, Stamp> sourceStamps,
-      ToplevelDeclarationProvider declProvider, 
-      List<Driver> currentlyProcessing,
-      List<FromTo> renamings,
-      IProgressMonitor monitor,
-      Synthesizer syn) {
+      IProgressMonitor monitor) {
     this.env = env;
     this.baseLang = baseLang;
     this.sourceFilePaths = sourceFilePaths;
@@ -158,7 +126,5 @@ public class DriverParameters {
     this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;
     this.monitor = monitor;
-    this.syn = syn;
   }
-  
 }
