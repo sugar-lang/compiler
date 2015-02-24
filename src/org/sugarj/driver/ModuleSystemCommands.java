@@ -225,7 +225,7 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateResult(String modulePath, Environment env, Mode<Result> mode) throws IOException {
+  public static Result locateResult(String modulePath, Environment env) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
     Result result = Result.read(dep);

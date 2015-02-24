@@ -10,13 +10,11 @@ import static org.sugarj.driver.STRCommands.extractSTR;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.text.ParseException;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,7 +22,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import org.spoofax.interpreter.terms.IStrategoAppl;
@@ -44,11 +41,10 @@ import org.strategoxt.lang.StrategoException;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.AbstractBaseProcessor;
 import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.Mode;
-import org.sugarj.cleardep.Synthesizer;
 import org.sugarj.cleardep.build.BuildManager;
 import org.sugarj.cleardep.build.BuildRequirement;
 import org.sugarj.cleardep.build.Builder;
+import org.sugarj.cleardep.build.RequiredBuilderFailed;
 import org.sugarj.cleardep.stamp.ContentHashStamper;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.cleardep.stamp.Stamper;
@@ -63,14 +59,13 @@ import org.sugarj.common.errors.SourceLocation;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
+import org.sugarj.common.util.ArrayUtils;
 import org.sugarj.common.util.Pair;
 import org.sugarj.driver.Renaming.FromTo;
 import org.sugarj.driver.caching.ModuleKeyCache;
-import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
 import org.sugarj.stdlib.StdLib;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
-import org.sugarj.util.ProcessingListener;
 
 
 /**
@@ -78,10 +73,10 @@ import org.sugarj.util.ProcessingListener;
  */
 public class Driver extends Builder<DriverInput, Result> {
   
-  private final static int PENDING_TIMEOUT = 30000;
-
-  private static Map<Set<? extends Path>, Entry<ToplevelDeclarationProvider, Driver>> pendingRuns = new HashMap<>();
-  private static List<ProcessingListener> processingListener = new LinkedList<ProcessingListener>();
+//  private final static int PENDING_TIMEOUT = 30000;
+//
+//  private static Map<Set<? extends Path>, Entry<ToplevelDeclarationProvider, Driver>> pendingRuns = new HashMap<>();
+//  private static List<ProcessingListener> processingListener = new LinkedList<ProcessingListener>();
 
   /**
    * cache location -> cache
@@ -218,7 +213,7 @@ public class Driver extends Builder<DriverInput, Result> {
     initDriver();
   }
   
-  private void initDriver() throws FileNotFoundException, IOException, InvalidParseTableException {
+  private void initDriver() {
     this.baseLanguage = input.baseLang;
     this.baseProcessor = baseLanguage.createNewProcessor();
     
@@ -287,8 +282,6 @@ public class Driver extends Builder<DriverInput, Result> {
       throw new IllegalArgumentException("Cannot yet handle driver calls with more than one source file; FIXME");
     
     RelativePath sourceFile = getSourceFile();
-    String depPath = FileCommands.dropExtension(sourceFile.getRelativePath()) + ".dep";
-    Path dep = new RelativePath(input.env.getBin(), depPath);
     
     Stamp sourceFileStamp;
     if (input.editedSourceStamps.containsKey(sourceFile))
@@ -377,7 +370,7 @@ public class Driver extends Builder<DriverInput, Result> {
       stepped();
       
       // GENERATE model
-      if (input.syn == null)
+      if (!driverResult.isGenerated())
         generateModel();
       
       // COMPILE the generated java file
@@ -424,6 +417,8 @@ public class Driver extends Builder<DriverInput, Result> {
         driverResult.setState(CompilationUnit.State.SUCCESS);
         driverResult.setSugaredSyntaxTree(null);
       }
+      
+      Driver.storeCaches(input.env);
     }
   }
 
@@ -811,71 +806,35 @@ public class Driver extends Builder<DriverInput, Result> {
    * @throws TokenExpectedException 
    * @throws ClassNotFoundException 
    */
-  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, Synthesizer syn) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, BuildRequirement<?, ?, ?, ?>[] injectedDependencies) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     // module is in sugarj standard library
     if (modulePath.startsWith("org/sugarj"))
       return false;
     
-    Mode<Result> reqmode = input.env.<Result>getMode().getModeForRequiredModules();
-    Result result = ModuleSystemCommands.locateConsistentResult(modulePath, input.env, reqmode, input.editedSourceStamps);
-    boolean consistent;
-    if (result != null) {
-      consistent = true;
-    }
-    else {
-      result = ModuleSystemCommands.locateResult(modulePath, input.env, reqmode);
-      consistent = false;
+    RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, input.env.getSourcePath(), baseProcessor, input.env);
+    if (importSourceFile != null) {
+      BuildRequirement<?, ?, ?, ?>[] injected = ArrayUtils.arrayConcat(injectedDependencies, driverResult.getGeneratedBy().input.injectedRequirements);
+      subcompile(importSourceFile, injected);
     }
     
-    Set<RelativePath> importSourceFiles;
-    if (result != null && !result.getSourceArtifacts().isEmpty())
-      importSourceFiles = result.getSourceArtifacts();
-    else {
-      importSourceFiles = new HashSet<>();
-      RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, input.env.getSourcePath(), baseProcessor, input.env);
-      if (importSourceFile != null)
-        importSourceFiles.add(importSourceFile);
-    }
 
-    boolean sourceFileAvailable = !importSourceFiles.isEmpty();
-    boolean requiresUpdate = result == null || !consistent;
+    // TODO support circular imports again
+//    Result circularResult = getCircularImportResult(importSourceFiles);
+//    if (circularResult != null) {
+//      // Circular import. Assume source file does not provide syntactic sugar.
+//      log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
+//      baseProcessor.processModuleImport(toplevelDecl);
+//      circularLinks.add(importSourceFiles);
+//      driverResult.addModuleDependency(circularResult);
+//      return true;
+//    }
     
-    Result circularResult = getCircularImportResult(importSourceFiles);
-    if (circularResult != null) {
-      // Circular import. Assume source file does not provide syntactic sugar.
-      log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
-      baseProcessor.processModuleImport(toplevelDecl);
-      circularLinks.add(importSourceFiles);
-      driverResult.addModuleDependency(circularResult);
-      return true;
-    }
     
-    if (sourceFileAvailable && requiresUpdate) {
-      // Required module needs recompilation.
-      log.log("Need to compile imported module " + modulePath + " first.", Log.IMPORT);
-      
-      // FIXME
-      assert importSourceFiles.size() == 1 : "Cannot yet pass multiple source files as input to compiler, need's fixing.";
-      
-      if (syn == null && result != null)
-        syn = result.getSynthesizer();
-      result = subcompile(importSourceFiles.iterator().next(), syn);
-      if (result == null || result.hasFailed())
-        setErrorMessage("Problems while compiling " + modulePath);
-        
-      log.log("CONTINUE PROCESSING'" + input.sourceFilePaths + "'.", Log.CORE);
-    }
-    
-    if (result != null) {
-      if (result.hasPersistentVersionChanged())
-        setErrorMessage("Result is inconsitent with persistent version.");
-      driverResult.addModuleDependency(result);
-    }
-    
-    if (!importSourceFiles.isEmpty())
+    if (importSourceFile != null) {
+      Set<RelativePath> sourceFiles = Collections.singleton(importSourceFile);
       // if importSourceFile is delegated to something currently being processed
       for (Driver dr : input.currentlyProcessing)
-        if (dr.driverResult.isDelegateOf(importSourceFiles)) {
+        if (dr.driverResult.isDelegateOf(sourceFiles)) {
           baseProcessor.processModuleImport(toplevelDecl);
 
           if (dr != this)
@@ -883,6 +842,7 @@ public class Driver extends Builder<DriverInput, Result> {
           
           return true;
         }
+    }
     
     return false;
   }
@@ -908,26 +868,21 @@ public class Driver extends Builder<DriverInput, Result> {
    * @return
    * @throws InterruptedException
    */
-  public Result subcompile(RelativePath importSourceFile, BuildRequirement<DriverInput, Result, Driver, DriverFactory>) throws InterruptedException {
+  public Result subcompile(RelativePath importSourceFile, BuildRequirement<?, ?, ?, ?>... injectedRequirments) throws InterruptedException {
     try {
-      Result result;
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        result = run(DriverInput.create(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, true));
+        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injectedRequirments);
+        return require(DriverFactory.instance, subinput);
       }
-      else
-        result = run(DriverInput.create(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, false));
-      return result;
+      else {
+        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injectedRequirments);
+        return require(DriverFactory.instance, subinput);
+      }
     } catch (IOException e) {
-      setErrorMessage("Problems while compiling " + importSourceFile);
-    } catch (TokenExpectedException e) {
-      setErrorMessage("Problems while compiling " + importSourceFile);
-    } catch (ParseException e) {
-      setErrorMessage("Problems while compiling " + importSourceFile);
-    } catch (InvalidParseTableException e) {
-      setErrorMessage("Problems while compiling " + importSourceFile);
-    } catch (SGLRException e) {
-      setErrorMessage("Problems while compiling " + importSourceFile);
+      setErrorMessage("Problems while compiling " + importSourceFile + ": " + e.getMessage());
+    } catch (RequiredBuilderFailed e) {
+      setErrorMessage("Problems while compiling " + importSourceFile + ": " + e.getMessage());
     }
     return null;
   }
@@ -994,45 +949,16 @@ public class Driver extends Builder<DriverInput, Result> {
       return ;
     }
 
-    String thisModuleName = baseProcessor.getRelativeNamespaceSep() + baseLanguage.getExportName(toplevelDecl);
-    RelativePath thisModelPath = input.env.createOutPath(thisModuleName + ".model");
+    String exportModuleName = baseProcessor.getRelativeNamespaceSep() + baseLanguage.getExportName(toplevelDecl);
+    RelativePath thisModelPath = input.env.createOutPath(exportModuleName + ".model");
 
     IStrategoTerm importModel = ATermCommands.atermFromFile(importModelPath.getAbsolutePath());
     FromTo renaming = new FromTo(importModelPath, thisModelPath);
     IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
     ATermCommands.atermToFile(thisModel, thisModelPath);
+    driverResult.addGeneratedFile(thisModelPath);
 
-    CompilationUnit.State state = driverResult.getState();
-    Set<CompilationUnit> dependencies = new HashSet<>(driverResult.getModuleDependencies());
-    Set<Path> generatedFiles = new HashSet<>(driverResult.getGeneratedFiles());
-    Set<Path> externalFileDependencies = new HashSet<>(driverResult.getExternalFileDependencies());
-    Set<RelativePath> sourceFiles = driverResult.getSourceArtifacts();
-
-    // TODO Declare a synthesizer?
-    Result modelResult = subcompile(thisModelPath, null);
-    
-    if (modelResult.hasFailed())
-      state = CompilationUnit.State.FAILURE;
-    dependencies.addAll(modelResult.getModuleDependencies());
-    generatedFiles.addAll(modelResult.getGeneratedFiles());
-    externalFileDependencies.addAll(modelResult.getExternalFileDependencies()); 
-    
-    RelativePath sourceFile1 = getSourceFile();
-    String depPath = FileCommands.dropExtension(sourceFile1.getRelativePath()) + ".dep";
-    Path dep = new RelativePath(input.env.getBin(), depPath);
-    this.driverResult = Result.create(input.env.getStamper(), input.env.<Result>getMode(), input.syn, dep);
-    
-    driverResult.setState(state);
-    for (RelativePath sourceFile : sourceFiles)
-      driverResult.addSourceArtifact(sourceFile);
-    for (CompilationUnit cu : dependencies)
-      driverResult.addModuleDependency(cu);
-    for (Path p : generatedFiles)
-      driverResult.addGeneratedFile(p);
-    for (Path p : externalFileDependencies)
-      driverResult.addExternalFileDependency(p);
-    
-    generateModel();
+    subcompile(thisModelPath, this.getRequirement());
   }
 
   private List<String> processLanguageDec(IStrategoTerm toplevelDecl) throws IOException {

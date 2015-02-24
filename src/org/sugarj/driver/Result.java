@@ -206,6 +206,11 @@ public class Result extends CompilationUnit {
   public boolean isGenerated() {
     return getGeneratedBy()...;
   }
+  
+  @SuppressWarnings("unchecked")
+  public BuildRequirement<DriverInput, Result, Driver, DriverFactory> getGeneratedBy() {
+    return (BuildRequirement<DriverInput, Result, Driver, DriverFactory>) generatedBy;
+  }
 
   public Set<Path> getDeferredSourceFiles() {
     Set<Path> res = new HashSet<>();
