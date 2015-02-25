@@ -19,7 +19,7 @@ public class SugarJPrimitivesLibrary extends AbstractStrategoOperatorRegistry {
 //    add(new CurrentModule(driver));
 //    add(new CurrentImports(driver));
 //    add(new CurrentRenamings(driver.getParameters()));
-    add(new ResolveModelImport(importCommands, driver.getParameters().env));
+    add(new ResolveModelImport(importCommands, driver.getEnvironment()));
     add(new CurrentTransformationName(importCommands));
     add(new CurrentModelName(importCommands));
 //    add(new CompileTransformed(driver, environment));

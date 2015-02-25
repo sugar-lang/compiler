@@ -454,6 +454,7 @@ public class DriverCLI {
     if (line.hasOption("cache"))
       environment.setCacheDir(pathArgument(line.getOptionValue("cache")));
   
+    environment.setCompileBin(targetDir);
     if (line.hasOption("gen-files"))
       environment.setBin(targetDir);
     else

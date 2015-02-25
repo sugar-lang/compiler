@@ -26,17 +26,15 @@ public class ImportCommands {
   private AbstractBaseProcessor baseProcessor;
   private Environment environment;
   private Driver driver;
-  private DriverInput input;
   private STRCommands str;
   
   private String currentTransName;
   private String currentModelName;
   
-  public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, DriverInput input, STRCommands str) {
+  public ImportCommands(AbstractBaseProcessor baseProcessor, Environment environment, Driver driver, STRCommands str) {
     this.baseProcessor = baseProcessor;
     this.environment = environment;
     this.driver = driver;
-    this.input = input;
     this.str = str;
   }
 
@@ -67,7 +65,7 @@ public class ImportCommands {
         // TODO support non-qualifed transformations and model paths
         throw new RuntimeException("TODO support non-qualifed transformations and model paths");
 
-      RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(path, input.env.getSourcePath(), baseProcessor, input.env);
+      RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(path, driver.getEnvironment().getSourcePath(), baseProcessor, driver.getEnvironment());
       if (importSourceFile == null)
         return null;
       
@@ -88,7 +86,7 @@ public class ImportCommands {
    */
   public Pair<RelativePath, ? extends BuildRequirement<?,?,?,?>> transformModel(RelativePath modelPath, DriverBuildRequirement modelReq, RelativePath transformationPath, DriverBuildRequirement transformationReq, IStrategoTerm term) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
-    RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(FileCommands.dropExtension(transformedModelPath.getRelativePath()), input.env.getSourcePath(), baseProcessor, input.env);
+    RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(FileCommands.dropExtension(transformedModelPath.getRelativePath()), driver.getEnvironment().getSourcePath(), baseProcessor, driver.getEnvironment());
     
     TransformModelBuilder.Input input = new TransformModelBuilder.Input(
         modelPath,

@@ -15,8 +15,6 @@ import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
-import org.sugarj.driver.declprovider.TermToplevelDeclarationProvider;
-import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 
 /**
  * @author Sebastian Erdweg
@@ -27,7 +25,7 @@ public class DriverInput implements Serializable {
   /**
    * Processing environment.
    */
-  public final Environment env;
+  private final Environment env;
   
   /**
    * Base language that the driver processes files for.
@@ -94,29 +92,12 @@ public class DriverInput implements Serializable {
         sourceFile,
         editedSources,
         editedSourceStamps,
-        new TermToplevelDeclarationProvider(termSource, sourceFile, env),
         renamings,
         monitor,
         injectedRequirements);
   }
   
-  public DriverInput(
-      Environment env,
-      AbstractBaseLanguage baseLang,
-      RelativePath sourceFilePaths,
-      Map<RelativePath, String> sourceFiles,
-      Map<RelativePath, Stamp> sourceStamps,
-      ToplevelDeclarationProvider declProvider, 
-      List<FromTo> renamings,
-      IProgressMonitor monitor,
-      BuildRequirement<?, ?, ?, ?>... injectedRequirements) {
-    this.env = env;
-    this.baseLang = baseLang;
-    this.sourceFilePath = sourceFilePaths;
-    this.editedSources = sourceFiles;
-    this.editedSourceStamps = sourceStamps;
-    this.renamings = renamings;
-    this.monitor = monitor;
-    this.injectedRequirements = injectedRequirements;
+  public Environment getEnvironment() {
+      return new Environment(env);
   }
 }
