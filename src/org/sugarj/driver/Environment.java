@@ -8,7 +8,6 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.sugarj.baselang.IORelay;
-import org.sugarj.cleardep.CompilationUnit;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
@@ -27,13 +26,12 @@ public class Environment implements IORelay, Serializable {
   private boolean terminateJVMAfterProcessing = true;
   
   private Path cacheDir = null;
+  private Path targetDir = null;
 
   private Path root = new AbsolutePath(".");
   
   private Stamper stamper; 
   
-  private TargettedMode<?> mode;
-
   /* 
    * parse all imports simultaneously, i.e., not one after the other
    */
@@ -75,9 +73,11 @@ public class Environment implements IORelay, Serializable {
   }
 
   public Path getBin() {
-    if (mode == null)
-      return null;
-    return mode.getTargetDir();
+    return targetDir;
+  }
+  
+  public void setBin(Path newTargetDir) {
+    this.targetDir = newTargetDir;
   }
   
   public Path getCacheDir() {
@@ -142,18 +142,5 @@ public class Environment implements IORelay, Serializable {
   
   public Stamper getStamper() {
     return stamper;
-  }
-  
-  public void setMode(TargettedMode<?> mode) {
-    if (getBin() != null) {
-      includePath.remove(getBin());
-    }
-    includePath.add(mode.getTargetDir());
-    this.mode = mode;
-  }
-  
-  @SuppressWarnings("unchecked")
-  public <E extends CompilationUnit> TargettedMode<E> getMode() {
-    return (TargettedMode<E>) mode;
   }
 }

@@ -34,12 +34,11 @@ import org.strategoxt.HybridInterpreter;
 import org.strategoxt.imp.runtime.Environment;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.CommandExecution;
+import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.Path;
 import org.sugarj.driver.Result;
-import org.sugarj.driver.Result.CompilerMode;
-import org.sugarj.driver.Result.EditorMode;
 import org.sugarj.driver.STRCommands;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
 
@@ -456,9 +455,9 @@ public class DriverCLI {
       environment.setCacheDir(pathArgument(line.getOptionValue("cache")));
   
     if (line.hasOption("gen-files"))
-      environment.setMode(new CompilerMode(targetDir, false));
+      environment.setBin(targetDir);
     else
-      environment.setMode(new EditorMode());
+      environment.setBin(FileCommands.tryNewTempDir());
     
     if (line.hasOption("atomic-imports"))
       environment.setAtomicImportParsing(true);

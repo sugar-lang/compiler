@@ -8,17 +8,17 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.BaseLanguageRegistry;
+import org.sugarj.cleardep.build.BuildManager;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.RelativePath;
-import org.sugarj.driver.Driver;
+import org.sugarj.driver.DriverFactory;
 import org.sugarj.driver.DriverInput;
 import org.sugarj.driver.Environment;
 import org.sugarj.driver.ModuleSystemCommands;
 import org.sugarj.driver.Result;
-import org.sugarj.driver.Result.CompilerMode;
 import org.sugarj.stdlib.StdLib;
 
 /**
@@ -59,7 +59,9 @@ public class Main {
         if (null == lang)
           throw new RuntimeException("Unknown file extension \"" + FileCommands.getExtension(sourceFile) + "\".");
         
-        Result res = Driver.run(DriverInput.create(environment, lang, sourceFile, monitor));
+        BuildManager manager = new BuildManager();
+        DriverInput input = new DriverInput(environment, lang, sourceFile, monitor);
+        Result res = manager.require(DriverFactory.instance.makeBuilder(input, manager));
     
         DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath());
         switch (returnValue) {
@@ -99,7 +101,7 @@ public class Main {
     environment.addToSourcePath(new AbsolutePath("."));
     environment.setAtomicImportParsing(true);
     environment.setNoChecking(true);
-    environment.setMode(new CompilerMode(new AbsolutePath("."), false));
+    environment.setBin(new AbsolutePath("."));
     
     for (String cp : System.getProperty("java.class.path").split(System.getProperty("path.separator"))) {
       if (cp.length() > 0)

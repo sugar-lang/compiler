@@ -2,7 +2,6 @@ package org.sugarj.driver;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -204,7 +203,11 @@ public class Result extends CompilationUnit {
   }
   
   public boolean isGenerated() {
-    return getGeneratedBy()...;
+    BuildRequirement<?, ?, ?, ?>[] injectedRequirements = getGeneratedBy().input.injectedRequirements;
+    for (int i = 0; i < injectedRequirements.length; i++)
+      if (injectedRequirements[i].input instanceof TransformModelBuilder.Input)
+        return true;
+    return false;
   }
   
   @SuppressWarnings("unchecked")

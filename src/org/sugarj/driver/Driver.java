@@ -66,6 +66,7 @@ import org.sugarj.driver.caching.ModuleKeyCache;
 import org.sugarj.driver.transformations.primitive.SugarJPrimitivesLibrary;
 import org.sugarj.stdlib.StdLib;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
+import org.sugarj.util.ProcessingListener;
 
 
 /**
@@ -76,7 +77,8 @@ public class Driver extends Builder<DriverInput, Result> {
 //  private final static int PENDING_TIMEOUT = 30000;
 //
 //  private static Map<Set<? extends Path>, Entry<ToplevelDeclarationProvider, Driver>> pendingRuns = new HashMap<>();
-//  private static List<ProcessingListener> processingListener = new LinkedList<ProcessingListener>();
+  
+  private static List<ProcessingListener> processingListener = new LinkedList<ProcessingListener>();
 
   /**
    * cache location -> cache
@@ -133,15 +135,15 @@ public class Driver extends Builder<DriverInput, Result> {
 //  private static synchronized void putPendingRun(Set<? extends Path> files, ToplevelDeclarationProvider declProvider, Driver driver) {
 //    pendingRuns.put(files, new AbstractMap.SimpleImmutableEntry<ToplevelDeclarationProvider, Driver>(declProvider, driver));
 //  }
-//  
-//  public static synchronized void addProcessingDoneListener(ProcessingListener listener) {
-//    processingListener.add(listener);
-//  }
-//  
-//  public static synchronized void removeProcessingDoneListener(ProcessingListener listener) {
-//    processingListener.remove(listener);
-//  }
-//  
+  
+  public static synchronized void addProcessingDoneListener(ProcessingListener listener) {
+    processingListener.add(listener);
+  }
+  
+  public static synchronized void removeProcessingDoneListener(ProcessingListener listener) {
+    processingListener.remove(listener);
+  }
+  
 //  private static void waitForPending(Set<? extends Path> files) {
 //    int count = 0;
 //    Object lock = new Object();
@@ -281,6 +283,10 @@ public class Driver extends Builder<DriverInput, Result> {
     if (input.sourceFilePaths.size() != 1) 
       throw new IllegalArgumentException("Cannot yet handle driver calls with more than one source file; FIXME");
     
+    if (input.injectedRequirements != null)
+      for (BuildRequirement<?, ?, ?, ?> req : input.injectedRequirements)
+        require(req);
+    
     RelativePath sourceFile = getSourceFile();
     
     Stamp sourceFileStamp;
@@ -291,7 +297,7 @@ public class Driver extends Builder<DriverInput, Result> {
     
     driverResult.addSourceArtifact(sourceFile, sourceFileStamp);
     
-    imp = new ImportCommands(baseProcessor, input.env, this, input, driverResult, str);
+    imp = new ImportCommands(baseProcessor, input.env, this, input, str);
 
     baseProcessor.init(input.sourceFilePaths, input.env);
     baseProcessor.getInterpreter().addOperatorRegistry(new SugarJPrimitivesLibrary(this, imp));
@@ -771,10 +777,12 @@ public class Driver extends Builder<DriverInput, Result> {
     else {
       IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
       
-      Pair<RelativePath, Boolean> transformationResult = imp.resolveModule(appl, true);
+      Pair<RelativePath, DriverBuildRequirement> transformationResult = imp.resolveModule(appl, true);
       
       if (transformationResult == null)
         return null;
+      
+      require(transformationResult.b);
       
       String modulePath = FileCommands.dropExtension(transformationResult.a.getRelativePath());
       String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
@@ -784,7 +792,7 @@ public class Driver extends Builder<DriverInput, Result> {
       else
         input.renamings.add(0, new FromTo(ImportCommands.getTransformationApplicationModelPath(appl, baseProcessor), modulePath));
       
-      return Pair.create(modulePath, transformationResult.b);
+      return Pair.create(modulePath, false);
     }    
   }
 
@@ -806,17 +814,14 @@ public class Driver extends Builder<DriverInput, Result> {
    * @throws TokenExpectedException 
    * @throws ClassNotFoundException 
    */
-  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, BuildRequirement<?, ?, ?, ?>[] injectedDependencies) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, DriverBuildRequirement[] injectedRequirements) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     // module is in sugarj standard library
     if (modulePath.startsWith("org/sugarj"))
       return false;
     
     RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, input.env.getSourcePath(), baseProcessor, input.env);
-    if (importSourceFile != null) {
-      BuildRequirement<?, ?, ?, ?>[] injected = ArrayUtils.arrayConcat(injectedDependencies, driverResult.getGeneratedBy().input.injectedRequirements);
-      subcompile(importSourceFile, injected);
-    }
-    
+    if (importSourceFile != null)
+      require(subcompile(importSourceFile, injectedRequirements));
 
     // TODO support circular imports again
 //    Result circularResult = getCircularImportResult(importSourceFiles);
@@ -868,16 +873,17 @@ public class Driver extends Builder<DriverInput, Result> {
    * @return
    * @throws InterruptedException
    */
-  public Result subcompile(RelativePath importSourceFile, BuildRequirement<?, ?, ?, ?>... injectedRequirments) throws InterruptedException {
+  public DriverBuildRequirement subcompile(RelativePath importSourceFile, BuildRequirement<?, ?, ?, ?>... injectedRequirments) throws InterruptedException {
+    BuildRequirement<?, ?, ?, ?>[] injected = ArrayUtils.arrayConcat(injectedRequirments, input.injectedRequirements);
     try {
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injectedRequirments);
-        return require(DriverFactory.instance, subinput);
+        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injected);
+        return new DriverBuildRequirement(DriverFactory.instance, subinput);
       }
       else {
-        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injectedRequirments);
-        return require(DriverFactory.instance, subinput);
+        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injected);
+        return new DriverBuildRequirement(DriverFactory.instance, subinput);
       }
     } catch (IOException e) {
       setErrorMessage("Problems while compiling " + importSourceFile + ": " + e.getMessage());
