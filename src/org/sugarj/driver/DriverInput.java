@@ -51,11 +51,6 @@ public class DriverInput implements Serializable {
   public final Map<RelativePath, Stamp> editedSourceStamps;
   
   /**
-   * Currently running driver chain, where each one called `subcompile` on the next one.
-   */
-  public final List<Driver> currentlyProcessing;
-  
-  /**
    * Currently active renamings;
    */
   public final List<FromTo> renamings;
@@ -71,14 +66,14 @@ public class DriverInput implements Serializable {
   public final BuildRequirement<?, ?, ?, ?>[] injectedRequirements;
   
   public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
-    this(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Stamp>emptyMap(), new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, injectedRequirements);
+    this(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Stamp>emptyMap(), new LinkedList<FromTo>(), monitor, injectedRequirements);
   }
   
   public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
-    this(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<Driver>(), new LinkedList<FromTo>(), monitor, injectedRequirements);
+    this(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<FromTo>(), monitor, injectedRequirements);
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
     String source = editedSources.get(sourceFile);
     if (source == null)
       source = FileCommands.readFileAsString(sourceFile);
@@ -87,13 +82,12 @@ public class DriverInput implements Serializable {
     this.sourceFilePath = sourceFile;
     this.editedSources = Collections.singletonMap(sourceFile, source);
     this.editedSourceStamps = editedSourceStamps;
-    this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;
     this.monitor = monitor;
     this.injectedRequirements = injectedRequirements;
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<Driver> currentlyProcessing, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
     this(
         env,
         baseLang,
@@ -101,7 +95,6 @@ public class DriverInput implements Serializable {
         editedSources,
         editedSourceStamps,
         new TermToplevelDeclarationProvider(termSource, sourceFile, env),
-        currentlyProcessing,
         renamings,
         monitor,
         injectedRequirements);
@@ -114,7 +107,6 @@ public class DriverInput implements Serializable {
       Map<RelativePath, String> sourceFiles,
       Map<RelativePath, Stamp> sourceStamps,
       ToplevelDeclarationProvider declProvider, 
-      List<Driver> currentlyProcessing,
       List<FromTo> renamings,
       IProgressMonitor monitor,
       BuildRequirement<?, ?, ?, ?>... injectedRequirements) {
@@ -123,7 +115,6 @@ public class DriverInput implements Serializable {
     this.sourceFilePath = sourceFilePaths;
     this.editedSources = sourceFiles;
     this.editedSourceStamps = sourceStamps;
-    this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;
     this.monitor = monitor;
     this.injectedRequirements = injectedRequirements;

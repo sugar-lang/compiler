@@ -18,7 +18,6 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -98,7 +97,6 @@ public class Driver extends Builder<DriverInput, Result> {
   private ToplevelDeclarationProvider declProvider;
 
   
-  private Set<RelativePath> circularLinks = new HashSet<>();
   private boolean dependsOnModel = false;
 
   private Result driverResult;
@@ -131,7 +129,6 @@ public class Driver extends Builder<DriverInput, Result> {
   
   private AbstractBaseLanguage baseLanguage;
   private AbstractBaseProcessor baseProcessor;
-  private boolean definesNonBaseDec = false;
   
   private AnalysisDataInterop analysisDataInterop;
   
@@ -330,7 +327,6 @@ public class Driver extends Builder<DriverInput, Result> {
     initForSources();
     
     List<FromTo> originalRenamings = new LinkedList<FromTo>(input.renamings);
-    input.currentlyProcessing.add(this);
     
     driverResult.setState(CompilationUnit.State.IN_PROGESS); 
     boolean success = false;
@@ -384,22 +380,7 @@ public class Driver extends Builder<DriverInput, Result> {
         generateModel();
       
       // COMPILE the generated java file
-      if (circularLinks.isEmpty())
-        compileGeneratedFiles();
-      else {
-        driverResult.generateFile(baseProcessor.getGeneratedSourceFile(), baseProcessor.getGeneratedSource());
-        
-        Result delegate = null;
-        for (Driver dr : input.currentlyProcessing)
-          if (circularLinks.contains(dr.input.sourceFilePath)) {
-            delegate = dr.driverResult;
-            break;
-          }
-        if (delegate != null)
-          driverResult.delegateCompilation(delegate, Collections.singleton(baseProcessor.getGeneratedSourceFile()), definesNonBaseDec);
-        else if (!dependsOnModel)
-          throw new IllegalStateException("Could not delegate compilation of circular dependency to other compiler instance.");
-      }
+      compileGeneratedFiles();
         
       driverResult.setSugaredSyntaxTree(makeSugaredSyntaxTree());
       driverResult.setDesugaredSyntaxTree(makeDesugaredSyntaxTree());
@@ -415,7 +396,6 @@ public class Driver extends Builder<DriverInput, Result> {
       success = true;
     } 
     finally {
-      input.currentlyProcessing.remove(this);
       input.renamings.clear();
       input.renamings.addAll(originalRenamings);
 
@@ -551,8 +531,6 @@ public class Driver extends Builder<DriverInput, Result> {
   private void processPlainDec(IStrategoTerm toplevelDecl) throws IOException {
     log.beginTask("processing", "PROCESS plain declaration.", Log.CORE);
     try {
-      definesNonBaseDec = true;
-      
       if (!sugaredBodyDecls.contains(lastSugaredToplevelDecl))
         sugaredBodyDecls.add(lastSugaredToplevelDecl);
       if (!desugaredBodyDecls.contains(toplevelDecl))
@@ -827,48 +805,10 @@ public class Driver extends Builder<DriverInput, Result> {
       require(subcompile(importSourceFile, injectedRequirements));
 
     // TODO support circular imports again
-//    Result circularResult = getCircularImportResult(importSourceFiles);
-//    if (circularResult != null) {
-//      // Circular import. Assume source file does not provide syntactic sugar.
-//      log.log("Circular import detected: " + modulePath + ".", Log.IMPORT);
-//      baseProcessor.processModuleImport(toplevelDecl);
-//      circularLinks.add(importSourceFiles);
-//      driverResult.addModuleDependency(circularResult);
-//      return true;
-//    }
-    
-    
-    if (importSourceFile != null) {
-      Set<RelativePath> sourceFiles = Collections.singleton(importSourceFile);
-      // if importSourceFile is delegated to something currently being processed
-      for (Driver dr : input.currentlyProcessing)
-        if (dr.driverResult.isDelegateOf(sourceFiles)) {
-          baseProcessor.processModuleImport(toplevelDecl);
 
-          if (dr != this)
-            circularLinks.add(dr.input.sourceFilePath);
-          
-          return true;
-        }
-    }
-    
     return false;
   }
   
-  /**
-   * Checks if the given source file is a circular import.
-   * Checks the ongoing driver runs to determine whether the source file in turn imports the current source file.
-   * 
-   * @return null if the import is not circular. The path to the imported file's driver result otherwise.
-   */
-  private Result getCircularImportResult(RelativePath importSourceFiles) {
-    for (Driver dr : input.currentlyProcessing)
-      if (dr.input.sourceFilePath.equals(importSourceFiles))
-        return dr.driverResult;
-    
-    return null;
-  }
-
   /**
    * Subcompile source file.
    * @param toplevelDecl
@@ -881,11 +821,11 @@ public class Driver extends Builder<DriverInput, Result> {
     try {
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injected);
+        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.renamings, input.monitor, injected);
         return new DriverBuildRequirement(subinput);
       }
       else {
-        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.currentlyProcessing, input.renamings, input.monitor, injected);
+        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.renamings, input.monitor, injected);
         return new DriverBuildRequirement(subinput);
       }
     } catch (IOException e) {
@@ -991,8 +931,6 @@ public class Driver extends Builder<DriverInput, Result> {
   private void processExtensionDec(IStrategoTerm toplevelDecl) throws IOException, InvalidParseTableException, TokenExpectedException, SGLRException {
     log.beginTask("processing", "PROCESS sugar declaration.", Log.CORE);
     try {
-      definesNonBaseDec = true;
-      
       if (!sugaredBodyDecls.contains(lastSugaredToplevelDecl))
         sugaredBodyDecls.add(lastSugaredToplevelDecl);
       if (!desugaredBodyDecls.contains(toplevelDecl))
@@ -1087,8 +1025,6 @@ public class Driver extends Builder<DriverInput, Result> {
   private void processTransformationDec(IStrategoTerm toplevelDecl) throws IOException {
     log.beginTask("processing", "PROCESS transformation declaration.", Log.CORE);
     try {
-      definesNonBaseDec = true;
-      
       if (!sugaredBodyDecls.contains(lastSugaredToplevelDecl))
         sugaredBodyDecls.add(lastSugaredToplevelDecl);
       if (!desugaredBodyDecls.contains(toplevelDecl))
@@ -1154,8 +1090,6 @@ public class Driver extends Builder<DriverInput, Result> {
   private void processModelDec(IStrategoTerm toplevelDecl) throws IOException {
     log.beginTask("processing", "PROCESS model declaration.", Log.CORE);
     try {
-      definesNonBaseDec = true;
-      
       if (!sugaredBodyDecls.contains(lastSugaredToplevelDecl))
         sugaredBodyDecls.add(lastSugaredToplevelDecl);
       if (!desugaredBodyDecls.contains(toplevelDecl))
