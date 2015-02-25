@@ -17,7 +17,8 @@ import org.sugarj.driver.Environment;
  * @author seba
  */
 public class TermToplevelDeclarationProvider implements ToplevelDeclarationProvider {
-
+  private static final long serialVersionUID = -7078184145952172284L;
+  
   private List<IStrategoTerm> terms;
   int index;
   

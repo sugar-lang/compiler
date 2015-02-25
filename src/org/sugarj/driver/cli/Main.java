@@ -14,7 +14,7 @@ import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.AbsolutePath;
 import org.sugarj.common.path.RelativePath;
-import org.sugarj.driver.DriverFactory;
+import org.sugarj.driver.DriverBuildRequirement;
 import org.sugarj.driver.DriverInput;
 import org.sugarj.driver.Environment;
 import org.sugarj.driver.ModuleSystemCommands;
@@ -61,7 +61,7 @@ public class Main {
         
         BuildManager manager = new BuildManager();
         DriverInput input = new DriverInput(environment, lang, sourceFile, monitor);
-        Result res = manager.require(DriverFactory.instance.makeBuilder(input, manager));
+        Result res = manager.require(new DriverBuildRequirement(input));
     
         DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath());
         switch (returnValue) {

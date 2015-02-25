@@ -1,6 +1,7 @@
 package org.sugarj.driver.declprovider;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.text.ParseException;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
@@ -13,7 +14,7 @@ import org.sugarj.driver.Driver;
  * @author jp
  * @author seba
  */
-public interface ToplevelDeclarationProvider {
+public interface ToplevelDeclarationProvider extends Serializable {
   /**
    * @param recovery use recovery parser if possible
    * @param lookahead if true, this is a lookahead parse that should not annotate errors.

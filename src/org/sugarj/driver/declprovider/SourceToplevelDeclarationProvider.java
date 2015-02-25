@@ -26,11 +26,12 @@ import org.sugarj.driver.RetractableTokenizer;
 import org.sugarj.driver.RetractableTreeBuilder;
 
 public class SourceToplevelDeclarationProvider implements ToplevelDeclarationProvider {
-
-  private Driver driver;
+  private static final long serialVersionUID = -6355762916686390330L;
+  
   private String lastRemainingInput;
   private String remainingInput;
-  private RetractableTreeBuilder treeBuilder;
+  private transient Driver driver;
+  private transient RetractableTreeBuilder treeBuilder;
 
   public SourceToplevelDeclarationProvider(String source, Path sourceFile) {
     this.remainingInput = source;

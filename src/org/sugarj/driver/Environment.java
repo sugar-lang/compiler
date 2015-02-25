@@ -77,6 +77,7 @@ public class Environment implements IORelay, Serializable {
   }
   
   public void setBin(Path newTargetDir) {
+    addToIncludePath(newTargetDir);
     this.targetDir = newTargetDir;
   }
   

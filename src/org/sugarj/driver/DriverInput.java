@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.spoofax.interpreter.terms.IStrategoTerm;
@@ -16,7 +15,6 @@ import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
-import org.sugarj.driver.declprovider.SourceToplevelDeclarationProvider;
 import org.sugarj.driver.declprovider.TermToplevelDeclarationProvider;
 import org.sugarj.driver.declprovider.ToplevelDeclarationProvider;
 
@@ -39,7 +37,7 @@ public class DriverInput implements Serializable {
   /**
    * Files to process.
    */
-  public final Set<RelativePath> sourceFilePaths;
+  public final RelativePath sourceFilePath;
   
   /**
    * Possibly edited source files and their content.
@@ -51,11 +49,6 @@ public class DriverInput implements Serializable {
    * `editedSourceStamps.keySet() == editedSources.keySet()`
    */
   public final Map<RelativePath, Stamp> editedSourceStamps;
-  
-  /**
-   * Provides toplevel declarations for all source files.
-   */
-  public final ToplevelDeclarationProvider declProvider;
   
   /**
    * Currently running driver chain, where each one called `subcompile` on the next one.
@@ -70,7 +63,7 @@ public class DriverInput implements Serializable {
   /**
    * Eclipse progress monitor.
    */
-  public final IProgressMonitor monitor;
+  public final transient IProgressMonitor monitor;
   
   /**
    * Build requirements injected into this compiler call. Needed to allow compilation of generated files.
@@ -91,10 +84,9 @@ public class DriverInput implements Serializable {
       source = FileCommands.readFileAsString(sourceFile);
     this.env = env;
     this.baseLang = baseLang;
-    this.sourceFilePaths = Collections.singleton(sourceFile);
+    this.sourceFilePath = sourceFile;
     this.editedSources = Collections.singletonMap(sourceFile, source);
     this.editedSourceStamps = editedSourceStamps;
-    this.declProvider = new SourceToplevelDeclarationProvider(source, sourceFile);
     this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;
     this.monitor = monitor;
@@ -105,7 +97,7 @@ public class DriverInput implements Serializable {
     this(
         env,
         baseLang,
-        Collections.singleton(sourceFile),
+        sourceFile,
         editedSources,
         editedSourceStamps,
         new TermToplevelDeclarationProvider(termSource, sourceFile, env),
@@ -118,7 +110,7 @@ public class DriverInput implements Serializable {
   public DriverInput(
       Environment env,
       AbstractBaseLanguage baseLang,
-      Set<RelativePath> sourceFilePaths,
+      RelativePath sourceFilePaths,
       Map<RelativePath, String> sourceFiles,
       Map<RelativePath, Stamp> sourceStamps,
       ToplevelDeclarationProvider declProvider, 
@@ -128,10 +120,9 @@ public class DriverInput implements Serializable {
       BuildRequirement<?, ?, ?, ?>... injectedRequirements) {
     this.env = env;
     this.baseLang = baseLang;
-    this.sourceFilePaths = sourceFilePaths;
+    this.sourceFilePath = sourceFilePaths;
     this.editedSources = sourceFiles;
     this.editedSourceStamps = sourceStamps;
-    this.declProvider = declProvider;
     this.currentlyProcessing = currentlyProcessing;
     this.renamings = renamings;
     this.monitor = monitor;

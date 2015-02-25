@@ -5,7 +5,7 @@ import org.sugarj.cleardep.build.BuildRequirement;
 public class DriverBuildRequirement extends BuildRequirement<DriverInput, Result, Driver, DriverFactory> {
   private static final long serialVersionUID = -8894738588093775426L;
 
-  public DriverBuildRequirement(DriverFactory factory, DriverInput input) {
-    super(factory, input);
+  public DriverBuildRequirement(DriverInput input) {
+    super(DriverFactory.instance, input);
   }
 }
