@@ -19,7 +19,7 @@ import org.sugarj.common.path.RelativePath;
  * 
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
  */
-public class Environment implements IORelay, Serializable {
+public class Environment implements IORelay, Serializable, Cloneable {
   
   private static final long serialVersionUID = -8403625415393122607L;
 
@@ -46,6 +46,8 @@ public class Environment implements IORelay, Serializable {
   
   private List<Path> sourcePath = new LinkedList<Path>();
   private List<Path> includePath = new LinkedList<Path>();
+  
+  private Environment() { }
   
   public Environment(Path stdlibDirPath, Stamper stamper) {
     this.stamper = stamper;
@@ -77,7 +79,10 @@ public class Environment implements IORelay, Serializable {
   }
   
   public void setBin(Path newTargetDir) {
-    addToIncludePath(newTargetDir);
+    if (targetDir != null)
+      includePath.remove(targetDir);
+    includePath.remove(newTargetDir);
+    includePath.add(0, newTargetDir);
     this.targetDir = newTargetDir;
   }
   
@@ -114,7 +119,10 @@ public class Environment implements IORelay, Serializable {
   }
 
   public void addToIncludePath(Path p) {
-    this.includePath.add(p);
+    if (includePath.isEmpty())
+      this.includePath.add(p);
+    else
+      this.includePath.add(1, p);
   }
   
   public List<Path> getIncludePath() {
@@ -143,5 +151,21 @@ public class Environment implements IORelay, Serializable {
   
   public Stamper getStamper() {
     return stamper;
+  }
+  
+  @Override
+  public Environment clone() {
+    Environment clone = new Environment();
+    clone.terminateJVMAfterProcessing = terminateJVMAfterProcessing;
+    clone.cacheDir = cacheDir;
+//    clone.compileTargetDir = compileTargetDir;
+    clone.targetDir = targetDir;
+    clone.root = root;
+    clone.stamper = stamper;
+    clone.atomicImportParsing = atomicImportParsing;
+    clone.noChecking = noChecking;
+    clone.sourcePath = new ArrayList<>(sourcePath);
+    clone.includePath = new ArrayList<>(includePath);
+    return clone;
   }
 }

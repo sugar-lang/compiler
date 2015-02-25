@@ -25,7 +25,7 @@ public class DriverInput implements Serializable {
   /**
    * Processing environment.
    */
-  private final Environment env;
+  public final Environment env;
   
   /**
    * Base language that the driver processes files for.
@@ -95,9 +95,5 @@ public class DriverInput implements Serializable {
         renamings,
         monitor,
         injectedRequirements);
-  }
-  
-  public Environment getEnvironment() {
-      return new Environment(env);
   }
 }

@@ -102,7 +102,6 @@ public class Main {
     environment.setAtomicImportParsing(true);
     environment.setNoChecking(true);
     environment.setBin(new AbsolutePath("."));
-    environment.setCompileBin(new AbsolutePath("."));
     
     for (String cp : System.getProperty("java.class.path").split(System.getProperty("path.separator"))) {
       if (cp.length() > 0)
