@@ -2,6 +2,7 @@ package org.sugarj.driver;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -221,11 +222,18 @@ public class Result extends CompilationUnit {
       res.addAll(s);
     return res;
   }
-  
+
+  @Override
+  protected void writeEntity(ObjectOutputStream out) throws IOException {
+    super.writeEntity(out);
+    out.writeObject(collectedErrors);
+  }
   
   @Override
+  @SuppressWarnings("unchecked")
   protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
     super.readEntity(ois, stamper);
+    this.collectedErrors = (List<String>) ois.readObject();
     transitivelyAffectedFiles = null;
   }
   
