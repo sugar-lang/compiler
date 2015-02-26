@@ -43,7 +43,6 @@ import org.sugarj.cleardep.CompilationUnit;
 import org.sugarj.cleardep.build.BuildManager;
 import org.sugarj.cleardep.build.BuildRequirement;
 import org.sugarj.cleardep.build.Builder;
-import org.sugarj.cleardep.build.BuilderFactory;
 import org.sugarj.cleardep.build.RequiredBuilderFailed;
 import org.sugarj.cleardep.stamp.ContentHashStamper;
 import org.sugarj.cleardep.stamp.Stamp;
@@ -219,7 +218,7 @@ public class Driver extends Builder<DriverInput, Result> {
   
   public Driver(DriverInput input, BuildManager manager) {
     super(input, DriverFactory.instance, manager);
-    this.env = input.env.clone();
+    this.env = input.getOriginalEnvironment().clone();
   }
   
   @Override
@@ -231,29 +230,6 @@ public class Driver extends Builder<DriverInput, Result> {
   protected Path persistentPath() {
     String depPath = FileCommands.dropExtension(input.sourceFilePath.getRelativePath()) + ".dep";
     return new RelativePath(env.getBin(), depPath);
-  }
-  
-  @Override
-  protected 
-  List<BuildRequirement<
-    DriverInput, 
-    Result, 
-    ? extends Builder<DriverInput, Result>, 
-        ? extends BuilderFactory<DriverInput, Result, ? extends Builder<DriverInput, Result>>>> 
-    alternativeRequirements() throws IOException {
-    List<BuildRequirement<DriverInput, Result, ? extends Builder<DriverInput, Result>, ? extends BuilderFactory<DriverInput, Result, ? extends Builder<DriverInput, Result>>>> alts = new ArrayList<>(super.alternativeRequirements());
-    
-    List<Path> includes = input.env.getIncludePath();
-    for (int i = includes.size() - 1; i >= 0; i--) {
-      Environment clone = input.env.clone();
-      clone.setBin(includes.get(i));
-      DriverInput altInput = new DriverInput(clone, input.baseLang, input.sourceFilePath, input.editedSources, input.editedSourceStamps, input.renamings, input.monitor, input.injectedRequirements);
-      BuildRequirement<DriverInput, Result, ? extends Builder<DriverInput, Result>, ? extends BuilderFactory<DriverInput, Result, ? extends Builder<DriverInput, Result>>>
-        req = new DriverBuildRequirement(altInput);
-      alts.add(req);
-    }
-    
-    return alts;
   }
   
   @Override
@@ -314,11 +290,12 @@ public class Driver extends Builder<DriverInput, Result> {
       for (BuildRequirement<?, ?, ?, ?> req : input.injectedRequirements)
         require(req);
     
-    Stamp sourceFileStamp;
-    if (input.editedSourceStamps.containsKey(input.sourceFilePath))
-      sourceFileStamp = input.editedSourceStamps.get(input.sourceFilePath);
-    else
+    Stamp sourceFileStamp = input.editedSourceStamp;
+    if (sourceFileStamp == null)
       sourceFileStamp = env.getStamper().stampOf(input.sourceFilePath);
+    String source = input.editedSource;
+    if (source == null)
+      source = FileCommands.readFileAsString(input.sourceFilePath);
     
     driverResult.addSourceArtifact(input.sourceFilePath, sourceFileStamp);
     
@@ -332,7 +309,7 @@ public class Driver extends Builder<DriverInput, Result> {
       declProvider = new TermToplevelDeclarationProvider(term, input.sourceFilePath, env);
     }
     else {
-      declProvider = new SourceToplevelDeclarationProvider(input.editedSources.get(input.sourceFilePath), input.sourceFilePath);
+      declProvider = new SourceToplevelDeclarationProvider(source, input.sourceFilePath);
     }
     declProvider.setDriver(this);
   }
@@ -847,11 +824,11 @@ public class Driver extends Builder<DriverInput, Result> {
     try {
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
-        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, term, input.editedSources, input.editedSourceStamps, input.renamings, input.monitor, injected);
+        DriverInput subinput = new DriverInput(input.getOriginalEnvironment(), baseLanguage, importSourceFile, term, null, null, input.renamings, input.monitor, injected);
         return new DriverBuildRequirement(subinput);
       }
       else {
-        DriverInput subinput = new DriverInput(input.env, baseLanguage, importSourceFile, input.editedSources, input.editedSourceStamps, input.renamings, input.monitor, injected);
+        DriverInput subinput = new DriverInput(input.getOriginalEnvironment(), baseLanguage, importSourceFile, null, null, input.renamings, input.monitor, injected);
         return new DriverBuildRequirement(subinput);
       }
     } catch (IOException e) {

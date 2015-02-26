@@ -27,14 +27,14 @@ import org.sugarj.common.path.Path;
 public class Result extends CompilationUnit {
 
   public static final long serialVersionUID = 2546270233774434268L;
-  
-  private List<IStrategoTerm> editorServices;
-  private List<String> collectedErrors;
-  private Set<BadTokenException> parseErrors;
-  private IStrategoTerm sugaredSyntaxTree;
-  private IStrategoTerm desugaredSyntaxTree;
-  private Path parseTableFile;
-  private Path desugaringsFile;
+
+  protected List<IStrategoTerm> editorServices;
+  protected List<String> collectedErrors;
+  protected Set<BadTokenException> parseErrors;
+  protected IStrategoTerm sugaredSyntaxTree;
+  protected IStrategoTerm desugaredSyntaxTree;
+  protected Path parseTableFile;
+  protected Path desugaringsFile;
   
   /**
    * Transitive closure (over module dependencies) of required and generated files.
@@ -75,8 +75,8 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  public void addModuleDependency(CompilationUnit mod, BuildRequirement<?, ?, ?, ?> req) {
-    super.addModuleDependency(mod, req);
+  public void addModuleDependency(CompilationUnit mod) {
+    super.addModuleDependency(mod);
     if (mod instanceof Result)
       getTransitivelyAffectedFileStamps().putAll(((Result) mod).getTransitivelyAffectedFileStamps());
   }
@@ -131,7 +131,7 @@ public class Result extends CompilationUnit {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
       return false;
     
-    return true;
+    return super.isConsistentExtend();
   }
   
   public void logError(String error) {
@@ -221,7 +221,8 @@ public class Result extends CompilationUnit {
       res.addAll(s);
     return res;
   }
-
+  
+  
   @Override
   protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
     super.readEntity(ois, stamper);

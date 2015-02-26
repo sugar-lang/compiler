@@ -2,17 +2,14 @@ package org.sugarj.driver;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.cleardep.build.BuildRequirement;
 import org.sugarj.cleardep.stamp.Stamp;
-import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
 
@@ -22,10 +19,12 @@ import org.sugarj.driver.Renaming.FromTo;
 public class DriverInput implements Serializable {
   private static final long serialVersionUID = -8640182333713236865L;
 
+//  public final transient boolean forEditor;
+  
   /**
    * Processing environment.
    */
-  public final Environment env;
+  private final Environment env;
   
   /**
    * Base language that the driver processes files for.
@@ -38,15 +37,14 @@ public class DriverInput implements Serializable {
   public final RelativePath sourceFilePath;
   
   /**
-   * Possibly edited source files and their content.
+   * Edited content of `sourceFilePath`, or null if unchanged.
    */
-  public final Map<RelativePath, String> editedSources;
+  public final String editedSource;
   
   /**
-   * Stamps of the source files.
-   * `editedSourceStamps.keySet() == editedSources.keySet()`
+   * Edited stamp of `sourceFilePath`, or null if unchanged..
    */
-  public final Map<RelativePath, Stamp> editedSourceStamps;
+  public final Stamp editedSourceStamp;
   
   /**
    * Currently active renamings;
@@ -64,36 +62,37 @@ public class DriverInput implements Serializable {
   public final BuildRequirement<?, ?, ?, ?>[] injectedRequirements;
   
   public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
-    this(env, baseLang, sourceFile, Collections.<RelativePath, String>emptyMap(), Collections.<RelativePath, Stamp>emptyMap(), new LinkedList<FromTo>(), monitor, injectedRequirements);
+    this(env, baseLang, sourceFile, null, null, new LinkedList<FromTo>(), monitor, injectedRequirements);
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
-    this(env, baseLang, sourceFile, editedSources, editedSourceStamps, new LinkedList<FromTo>(), monitor, injectedRequirements);
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String editedSource, Stamp editedSourceStamp, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+    this(env, baseLang, sourceFile, editedSource, editedSourceStamp, new LinkedList<FromTo>(), monitor, injectedRequirements);
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
-    String source = editedSources.get(sourceFile);
-    if (source == null)
-      source = FileCommands.readFileAsString(sourceFile);
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, String editedSource, Stamp editedSourceStamp, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+    this(
+        env,
+        baseLang,
+        sourceFile,
+        editedSource,
+        editedSourceStamp,
+        renamings,
+        monitor,
+        injectedRequirements);
+  }
+
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String editedSource, Stamp editedSourceStamp, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) {
     this.env = env;
     this.baseLang = baseLang;
     this.sourceFilePath = sourceFile;
-    this.editedSources = Collections.singletonMap(sourceFile, source);
-    this.editedSourceStamps = editedSourceStamps;
+    this.editedSource = editedSource;
+    this.editedSourceStamp = editedSourceStamp;
     this.renamings = renamings;
     this.monitor = monitor;
     this.injectedRequirements = injectedRequirements;
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, Map<RelativePath, String> editedSources, Map<RelativePath, Stamp> editedSourceStamps, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
-    this(
-        env,
-        baseLang,
-        sourceFile,
-        editedSources,
-        editedSourceStamps,
-        renamings,
-        monitor,
-        injectedRequirements);
+  public Environment getOriginalEnvironment() {
+    return env;
   }
 }
