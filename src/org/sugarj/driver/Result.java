@@ -3,6 +3,7 @@ package org.sugarj.driver;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -226,8 +227,10 @@ public class Result extends CompilationUnit {
   @Override
   protected void writeEntity(ObjectOutputStream out) throws IOException {
     super.writeEntity(out);
-    out.writeObject(collectedErrors);
-    out.writeObject(parseErrors);
+    List<String> errors = new ArrayList<String>(collectedErrors);
+    for (BadTokenException e : parseErrors)
+      errors.add("syntax error: line " + e.getLineNumber() + " column " + e.getColumnNumber() + ": " + e.getMessage());
+    out.writeObject(errors);
   }
   
   @Override
@@ -235,7 +238,6 @@ public class Result extends CompilationUnit {
   protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
     super.readEntity(ois, stamper);
     this.collectedErrors = (List<String>) ois.readObject();
-    this.parseErrors = (Set<BadTokenException>) ois.readObject();
     transitivelyAffectedFiles = null;
   }
   
