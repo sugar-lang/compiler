@@ -91,10 +91,12 @@ public class DriverCLI {
     
     boolean success = res.getCollectedErrors().isEmpty();
     
-    for (String s : res.getCollectedErrors())
-      log.log(s, Log.ALWAYS);
-    for (BadTokenException e : res.getParseErrors())
-      log.log("syntax error: line " + e.getLineNumber() + " column " + e.getColumnNumber() + ": " + e.getMessage(), Log.ALWAYS);
+    if (res.getCollectedErrors() != null)
+      for (String s : res.getCollectedErrors())
+        log.log(s, Log.ALWAYS);
+    if (res.getParseErrors() != null)
+      for (BadTokenException e : res.getParseErrors())
+        log.log("syntax error: line " + e.getLineNumber() + " column " + e.getColumnNumber() + ": " + e.getMessage(), Log.ALWAYS);
     
     if (res.getSugaredSyntaxTree() == null) {
       if (success) {
