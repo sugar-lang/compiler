@@ -227,6 +227,7 @@ public class Result extends CompilationUnit {
   protected void writeEntity(ObjectOutputStream out) throws IOException {
     super.writeEntity(out);
     out.writeObject(collectedErrors);
+    out.writeObject(parseErrors);
   }
   
   @Override
@@ -234,6 +235,7 @@ public class Result extends CompilationUnit {
   protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
     super.readEntity(ois, stamper);
     this.collectedErrors = (List<String>) ois.readObject();
+    this.parseErrors = (Set<BadTokenException>) ois.readObject();
     transitivelyAffectedFiles = null;
   }
   
