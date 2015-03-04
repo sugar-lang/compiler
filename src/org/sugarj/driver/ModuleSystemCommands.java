@@ -9,11 +9,16 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.sugarj.AbstractBaseProcessor;
-import org.sugarj.cleardep.build.BuildRequirement;
+import org.sugarj.cleardep.BuildUnit;
+import org.sugarj.cleardep.BuildUnit.ModuleVisitor;
+import org.sugarj.cleardep.build.BuildRequest;
+import org.sugarj.cleardep.dependency.FileRequirement;
+import org.sugarj.cleardep.dependency.Requirement;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
@@ -33,16 +38,16 @@ public class ModuleSystemCommands {
      * @param importTerm
      * @param javaOutFile
      * @param interp
-     * @param driverResult
+     * @param driver
      * @return true iff a class file existed.
      * @throws IOException
      */
-    public static RelativePath importBinFile(String modulePath, Environment environment, AbstractBaseProcessor baseProcessor, Result driverResult) throws IOException {
+    public static RelativePath importBinFile(String modulePath, Environment environment, AbstractBaseProcessor baseProcessor, Driver driver) throws IOException {
       String ext = baseProcessor.getLanguage().getBinaryFileExtension();
       if (ext == null)
         // language is interpreted
         ext = baseProcessor.getLanguage().getBaseFileExtension();
-      RelativePath clazz = searchFile(modulePath, ext, environment, driverResult);
+      RelativePath clazz = searchFile(modulePath, ext, environment, driver);
       if (clazz == null)
         return null;
       
@@ -55,12 +60,12 @@ public class ModuleSystemCommands {
    * @param modulePath
    * @param currentGrammarModule
    * @param availableSDFImports
-   * @param driverResult
+   * @param driver
    * @return path to new grammar or null if no sdf file existed.
    * @throws IOException 
    */
-  public static RelativePath importSdf(String modulePath, Environment environment, Result driverResult) {
-    RelativePath sdf = searchFile(modulePath, "sdf", environment, driverResult);
+  public static RelativePath importSdf(String modulePath, Environment environment, Driver driver) {
+    RelativePath sdf = searchFile(modulePath, "sdf", environment, driver);
     
     if (sdf == null)
       return null;
@@ -74,12 +79,12 @@ public class ModuleSystemCommands {
    * @param modulePath
    * @param currentTransModule
    * @param availableSTRImports
-   * @param driverResult
+   * @param driver
    * @return path to new Stratego module or null of no str file existed
    * @throws IOException 
    */
-  public static RelativePath importStratego(String modulePath, Environment environment, Result driverResult) {
-    RelativePath str = searchFile(modulePath, "str", environment, driverResult);
+  public static RelativePath importStratego(String modulePath, Environment environment, Driver driver) {
+    RelativePath str = searchFile(modulePath, "str", environment, driver);
     
     if (str == null)
       return null;
@@ -91,12 +96,12 @@ public class ModuleSystemCommands {
   /**
    * 
    * @param modulePath
-   * @param driverResult
+   * @param driver
    * @return true iff a serv file existed.
    * @throws IOException
    */
-  public static boolean importEditorServices(String modulePath, Environment environment, Result driverResult) throws IOException {
-    RelativePath serv = searchFile(modulePath, "serv", environment, driverResult);
+  public static boolean importEditorServices(String modulePath, Environment environment, Driver driver) throws IOException {
+    RelativePath serv = searchFile(modulePath, "serv", environment, driver);
     
     if (serv == null)
       return false;
@@ -109,7 +114,7 @@ public class ModuleSystemCommands {
       String line;
       
       while ((line = reader.readLine()) != null)
-        driverResult.addEditorService(ATermCommands.atermFromString(line));
+        driver.getCurrentResult().addEditorService(ATermCommands.atermFromString(line));
       
       return true;
     } finally {
@@ -120,8 +125,8 @@ public class ModuleSystemCommands {
     }
   }
   
-  public static RelativePath importModel(String modulePath, Environment environment, Result driverResult) {
-    RelativePath model = searchFile(modulePath, "model", environment, driverResult);
+  public static RelativePath importModel(String modulePath, Environment environment, Driver driver) {
+    RelativePath model = searchFile(modulePath, "model", environment, driver);
     
     if (model == null)
       return null;
@@ -159,26 +164,26 @@ public class ModuleSystemCommands {
    * @return RelativePath or null.
    * @throws IOException 
    */
-  public static RelativePath searchFile(String relativePath, String fileExtension, Environment environment, Result driverResult) {
-    RelativePath p = searchFile(environment.createOutPath(relativePath + "." + fileExtension), driverResult);
+  public static RelativePath searchFile(String relativePath, String fileExtension, Environment environment, Driver driver) {
+    RelativePath p = searchFile(environment.createOutPath(relativePath + "." + fileExtension), driver);
     if (p == null) {
-      p = searchFileInSearchPath(relativePath, fileExtension, environment.getIncludePath(), driverResult);
+      p = searchFileInSearchPath(relativePath, fileExtension, environment.getIncludePath(), driver);
     }
     return p;
   }
 
-  private static RelativePath searchFile(RelativePath file, Result driverResult) {
-    if (driverResult != null)
-      driverResult.addExternalFileDependency(file);
+  private static RelativePath searchFile(RelativePath file, Driver driver) {
+    if (driver != null)
+      driver.requires(file);
     if (file.getFile().exists())
       return file;
     
     return null;
   }
 	  
-  private static RelativePath searchFileInSearchPath(String relativePath, String extension, List<Path> searchPath, Result driverResult) {
+  private static RelativePath searchFileInSearchPath(String relativePath, String extension, List<Path> searchPath, Driver driver) {
     for (Path base : searchPath) {
-      RelativePath p = searchFile(base, relativePath, extension, driverResult);
+      RelativePath p = searchFile(base, relativePath, extension, driver);
       if (p != null)
         return p;
     }
@@ -186,9 +191,9 @@ public class ModuleSystemCommands {
     return null;
   }
 
-  private static RelativePath searchFileInSourceLocationPath(String relativePath, String extension, List<Path> searchPath, Result driverResult) {
+  private static RelativePath searchFileInSourceLocationPath(String relativePath, String extension, List<Path> searchPath, Driver driver) {
     for (Path loc : searchPath) {
-      RelativePath p = searchFile(loc, relativePath, extension, driverResult);
+      RelativePath p = searchFile(loc, relativePath, extension, driver);
       if (p != null)
         return p;
     }
@@ -196,7 +201,7 @@ public class ModuleSystemCommands {
     return null;
   }
 
-  private static RelativePath searchFile(Path base, String relativePath, String extension, Result driverResult) {
+  private static RelativePath searchFile(Path base, String relativePath, String extension, Driver driver) {
     if (relativePath.startsWith(base.getAbsolutePath())) {
       int sepOffset = relativePath.endsWith(File.separator) ? 0 : 1;
       relativePath = relativePath.substring(base.getAbsolutePath().length() + sepOffset);
@@ -204,7 +209,7 @@ public class ModuleSystemCommands {
     
     if (base.getFile().isDirectory()) {
       RelativePath p = new RelativePath(base, relativePath + "." + extension);
-      if (searchFile(p, driverResult) != null)
+      if (searchFile(p, driver) != null)
         return p;
     }
     
@@ -226,17 +231,17 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateResult(String modulePath, Environment env) throws IOException {
+  public static BuildUnit<Result> locateResult(String modulePath, Environment env, BuildRequest<?, Result, ?, ?> req) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.read(dep);
+    BuildUnit<Result> result = BuildUnit.read(dep, req);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.read(dep);
+      result = BuildUnit.read(dep, req);
       if (result != null)
         return result;
     }
@@ -244,21 +249,69 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static Result locateConsistentResult(String modulePath, Environment env, Map<RelativePath, Stamp> sourceFiles, BuildRequirement<?, Result, ?, ?> req) throws IOException {
+  public static BuildUnit<Result> locateConsistentResult(String modulePath, Environment env, Map<RelativePath, Stamp> sourceFiles, BuildRequest<?, Result, ?, ?> req) throws IOException {
     RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
     
-    Result result = Result.readConsistent(sourceFiles, dep, req);
+    BuildUnit<Result> result = BuildUnit.readConsistent(dep, req, sourceFiles);
     if (result != null)
       return result;
     
     for (Path base : env.getIncludePath()) {
       dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
       
-      result = Result.readConsistent(sourceFiles, dep, req);
+      result = BuildUnit.readConsistent(dep, req, sourceFiles);
       if (result != null)
         return result;
     }
     
     return null;
   }
+  
+  public static boolean isGenerated(BuildUnit<Result> unit) {
+    @SuppressWarnings("unchecked")
+    BuildRequest<DriverInput, Result, ?, ?> genBy = (BuildRequest<DriverInput, Result, ?, ?>) unit.getGeneratedBy();
+    BuildRequest<?, ?, ?, ?>[] injectedRequirements = genBy.input.injectedRequirements;
+    for (int i = 0; i < injectedRequirements.length; i++)
+      if (injectedRequirements[i].input instanceof TransformModelBuilder.Input)
+        return true;
+    return false;
+  }
+  
+  
+  public static Map<Path, Stamp> getTransitivelyAffectedFileStamps(BuildUnit<?> unit) {
+    final Map<Path, Stamp> deps = new HashMap<>();
+
+    ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
+      @Override
+      public Void visit(BuildUnit<?> mod) {
+        for (FileRequirement freq : mod.getGeneratedFileRequirements())
+          deps.put(freq.path, freq.stamp);
+        for (Requirement req : mod.getRequirements())
+          if (req instanceof FileRequirement) {
+            FileRequirement freq = (FileRequirement) req;
+            deps.put(freq.path, freq.stamp);
+          }
+        return null;
+      }
+
+      @Override
+      public Void combine(Void v1, Void v2) {
+        return null;
+      }
+
+      @Override
+      public Void init() {
+        return null;
+      }
+
+      @Override
+      public boolean cancel(Void t) {
+        return false;
+      }
+    };
+
+    unit.visit(collectAffectedFileStampsVisitor);
+    return deps;
+  }
+
 }

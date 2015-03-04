@@ -1,6 +1,5 @@
 package org.sugarj.driver;
 
-import org.sugarj.cleardep.build.BuildManager;
 import org.sugarj.cleardep.build.BuilderFactory;
 
 public class DriverFactory implements BuilderFactory<DriverInput, Result, Driver> {
@@ -11,8 +10,8 @@ public class DriverFactory implements BuilderFactory<DriverInput, Result, Driver
   private DriverFactory() { }
   
   @Override
-  public Driver makeBuilder(DriverInput input, BuildManager manager) {
-    return new Driver(input, manager);
+  public Driver makeBuilder(DriverInput input) {
+    return new Driver(input);
   }
 
 }

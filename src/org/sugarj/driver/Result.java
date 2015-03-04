@@ -1,8 +1,9 @@
 package org.sugarj.driver;
 
+import java.io.Externalizable;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,11 +15,7 @@ import java.util.Set;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
-import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.PersistableEntity;
-import org.sugarj.cleardep.build.BuildRequirement;
-import org.sugarj.cleardep.stamp.Stamp;
-import org.sugarj.cleardep.stamp.Stamper;
+import org.sugarj.cleardep.output.BuildOutput;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.Path;
@@ -26,7 +23,7 @@ import org.sugarj.common.path.Path;
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
  */
-public class Result extends CompilationUnit {
+public class Result implements BuildOutput, Externalizable {
 
   public static final long serialVersionUID = 2546270233774434268L;
 
@@ -39,20 +36,11 @@ public class Result extends CompilationUnit {
   protected Path desugaringsFile;
   
   /**
-   * Transitive closure (over module dependencies) of required and generated files.
-   */
-  transient private Map<Path, Stamp> transitivelyAffectedFiles;
-
-  /**
    * maps from source artifacts to generated source files 
    */
   private Map<Set<? extends Path>, Set<? extends Path>> deferredSourceFiles;
   
-  public Result() { /* for deserialization only */ }
-  
-  @Override
-  protected void init() {
-    super.init();
+  public Result() { 
     editorServices = new LinkedList<IStrategoTerm>();
     collectedErrors = new LinkedList<String>();
     parseErrors = new HashSet<BadTokenException>();
@@ -60,63 +48,9 @@ public class Result extends CompilationUnit {
     desugaredSyntaxTree = null;
     parseTableFile = null;
     desugaringsFile = null;
-    transitivelyAffectedFiles = new HashMap<>();
     deferredSourceFiles = new HashMap<>();
-  }
+ }
   
-  @Override
-  public void addExternalFileDependency(Path file, Stamp stampOfFile) {
-    super.addExternalFileDependency(file, stampOfFile);
-    getTransitivelyAffectedFileStamps().put(file, stampOfFile);
-  }
-  
-  @Override
-  public void addGeneratedFile(Path file, Stamp stampOfFile) {
-    super.addGeneratedFile(file, stampOfFile);
-    getTransitivelyAffectedFileStamps().put(file, stampOfFile);
-  }
-  
-  @Override
-  public void addModuleDependency(CompilationUnit mod) {
-    super.addModuleDependency(mod);
-    if (mod instanceof Result)
-      getTransitivelyAffectedFileStamps().putAll(((Result) mod).getTransitivelyAffectedFileStamps());
-  }
-
-  private Map<Path, Stamp> getTransitivelyAffectedFileStamps() {
-    if (transitivelyAffectedFiles == null) {
-      final Map<Path, Stamp> deps = new HashMap<>();
-      
-      ModuleVisitor<Void> collectAffectedFileStampsVisitor = new ModuleVisitor<Void>() {
-        @Override public Void visit(CompilationUnit mod) {
-          deps.putAll(((Result) mod).generatedFiles); 
-          deps.putAll(((Result) mod).externalFileDependencies);
-          return null;
-        }
-        @Override public Void combine(Void v1, Void v2) { return null; }
-        @Override public Void init() { return null; }
-        @Override public boolean cancel(Void t) { return false; }
-      };
-      
-      visit(collectAffectedFileStampsVisitor);
-      
-      synchronized(this) { transitivelyAffectedFiles = deps; }
-    }
-
-    return transitivelyAffectedFiles;
-  }
-
-  public Set<Path> getTransitivelyAffectedFiles() {
-    return getTransitivelyAffectedFileStamps().keySet();
-  }
-  
-
-  public void generateFile(Path file, String content) throws IOException {
-    if (!FileCommands.exists(file) || !content.equals(FileCommands.readFileAsString(file)))
-      FileCommands.writeToFile(file, content);
-    addGeneratedFile(file);
-  }
-
   public void addEditorService(IStrategoTerm service) {
     if (!editorServices.contains(service))
       editorServices.add(service);
@@ -129,11 +63,11 @@ public class Result extends CompilationUnit {
   }
   
   @Override
-  protected boolean isConsistentExtend() {
+  public boolean isConsistent() {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
       return false;
     
-    return super.isConsistentExtend();
+    return true;
   }
   
   public void logError(String error) {
@@ -168,9 +102,9 @@ public class Result extends CompilationUnit {
     return desugaredSyntaxTree;
   }
   
-  void delegateCompilation(Result delegate, Set<Path> compileFiles,  boolean hasNonBaseDec) {
+  void delegateCompilation(Result delegate, Set<? extends Path> sourceFiles, Set<? extends Path> compileFiles) {
     delegate.deferredSourceFiles.putAll(deferredSourceFiles);
-    delegate.deferredSourceFiles.put(getSourceArtifacts(), compileFiles);
+    delegate.deferredSourceFiles.put(sourceFiles, compileFiles);
   }
   
   boolean isDelegateOf(Set<? extends Path> sourceFiles) {
@@ -204,19 +138,6 @@ public class Result extends CompilationUnit {
     return desugaringsFile;
   }
   
-  public boolean isGenerated() {
-    BuildRequirement<?, ?, ?, ?>[] injectedRequirements = getGeneratedBy().input.injectedRequirements;
-    for (int i = 0; i < injectedRequirements.length; i++)
-      if (injectedRequirements[i].input instanceof TransformModelBuilder.Input)
-        return true;
-    return false;
-  }
-  
-  @SuppressWarnings("unchecked")
-  public BuildRequirement<DriverInput, Result, Driver, DriverFactory> getGeneratedBy() {
-    return (BuildRequirement<DriverInput, Result, Driver, DriverFactory>) generatedBy;
-  }
-
   public Set<Path> getDeferredSourceFiles() {
     Set<Path> res = new HashSet<>();
     for (Set<? extends Path> s : deferredSourceFiles.values())
@@ -225,8 +146,7 @@ public class Result extends CompilationUnit {
   }
 
   @Override
-  protected void writeEntity(ObjectOutputStream out) throws IOException {
-    super.writeEntity(out);
+  public void writeExternal(ObjectOutput out) throws IOException {
     List<String> errors = new ArrayList<String>(collectedErrors);
     for (BadTokenException e : parseErrors)
       errors.add("syntax error: line " + e.getLineNumber() + " column " + e.getColumnNumber() + ": " + e.getMessage());
@@ -235,22 +155,7 @@ public class Result extends CompilationUnit {
   
   @Override
   @SuppressWarnings("unchecked")
-  protected void readEntity(ObjectInputStream ois, Stamper stamper) throws IOException, ClassNotFoundException {
-    super.readEntity(ois, stamper);
-    this.collectedErrors = (List<String>) ois.readObject();
-    transitivelyAffectedFiles = null;
-  }
-  
-  public static Result read(Path dep) throws IOException {
-    return PersistableEntity.read(Result.class, dep);
-  }
-  
-  public static Result readConsistent(Map<? extends Path, Stamp> editedSourceFiles, Path dep, BuildRequirement<?, Result, ?, ?> generatedBy) throws IOException {
-    return CompilationUnit.readConsistent(Result.class, editedSourceFiles, dep, generatedBy);
-  }
-  
-  public static Result create(Stamper stamper, Path dep, BuildRequirement<?, Result, ?, ?> generatedBy) throws IOException {
-    Result res = CompilationUnit.create(Result.class, stamper, dep, generatedBy);
-    return res;
+  public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+    this.collectedErrors = (List<String>) in.readObject();
   }
 }

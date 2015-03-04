@@ -8,7 +8,7 @@ import java.util.List;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.sugarj.AbstractBaseLanguage;
-import org.sugarj.cleardep.build.BuildRequirement;
+import org.sugarj.cleardep.build.BuildRequest;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
@@ -59,17 +59,17 @@ public class DriverInput implements Serializable {
   /**
    * Build requirements injected into this compiler call. Needed to allow compilation of generated files.
    */
-  public final BuildRequirement<?, ?, ?, ?>[] injectedRequirements;
+  public final BuildRequest<?, ?, ?, ?>[] injectedRequirements;
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IProgressMonitor monitor, BuildRequest<?, ?, ?, ?>... injectedRequirements) throws IOException {
     this(env, baseLang, sourceFile, null, null, new LinkedList<FromTo>(), monitor, injectedRequirements);
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String editedSource, Stamp editedSourceStamp, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String editedSource, Stamp editedSourceStamp, IProgressMonitor monitor, BuildRequest<?, ?, ?, ?>... injectedRequirements) throws IOException {
     this(env, baseLang, sourceFile, editedSource, editedSourceStamp, new LinkedList<FromTo>(), monitor, injectedRequirements);
   }
   
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, String editedSource, Stamp editedSourceStamp, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) throws IOException {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, IStrategoTerm termSource, String editedSource, Stamp editedSourceStamp, List<FromTo> renamings, IProgressMonitor monitor, BuildRequest<?, ?, ?, ?>... injectedRequirements) throws IOException {
     this(
         env,
         baseLang,
@@ -81,7 +81,7 @@ public class DriverInput implements Serializable {
         injectedRequirements);
   }
 
-  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String editedSource, Stamp editedSourceStamp, List<FromTo> renamings, IProgressMonitor monitor, BuildRequirement<?, ?, ?, ?>... injectedRequirements) {
+  public DriverInput(Environment env, AbstractBaseLanguage baseLang, RelativePath sourceFile, String editedSource, Stamp editedSourceStamp, List<FromTo> renamings, IProgressMonitor monitor, BuildRequest<?, ?, ?, ?>... injectedRequirements) {
     this.env = env;
     this.baseLang = baseLang;
     this.sourceFilePath = sourceFile;

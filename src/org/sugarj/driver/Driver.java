@@ -39,9 +39,8 @@ import org.strategoxt.HybridInterpreter;
 import org.strategoxt.lang.StrategoException;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.AbstractBaseProcessor;
-import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.build.BuildManager;
-import org.sugarj.cleardep.build.BuildRequirement;
+import org.sugarj.cleardep.BuildUnit;
+import org.sugarj.cleardep.build.BuildRequest;
 import org.sugarj.cleardep.build.Builder;
 import org.sugarj.cleardep.build.RequiredBuilderFailed;
 import org.sugarj.cleardep.stamp.ContentHashStamper;
@@ -216,8 +215,8 @@ public class Driver extends Builder<DriverInput, Result> {
 //    return driver.driverResult;
 //  }
   
-  public Driver(DriverInput input, BuildManager manager) {
-    super(input, DriverFactory.instance, manager);
+  public Driver(DriverInput input) {
+    super(input);
     this.env = input.getOriginalEnvironment().clone();
   }
   
@@ -235,11 +234,6 @@ public class Driver extends Builder<DriverInput, Result> {
   @Override
   protected Stamper defaultStamper() {
     return ContentHashStamper.instance;
-  }
-
-  @Override
-  protected Class<Result> resultClass() {
-    return Result.class;
   }
   
   private void initDriver() {
@@ -287,7 +281,7 @@ public class Driver extends Builder<DriverInput, Result> {
 
   private void initForSources() throws IOException, TokenExpectedException, SGLRException, InterruptedException {
     if (input.injectedRequirements != null)
-      for (BuildRequirement<?, ?, ?, ?> req : input.injectedRequirements)
+      for (BuildRequest<?, ?, ?, ?> req : input.injectedRequirements)
         require(req);
     
     Stamp sourceFileStamp = input.editedSourceStamp;
@@ -297,7 +291,7 @@ public class Driver extends Builder<DriverInput, Result> {
     if (source == null)
       source = FileCommands.readFileAsString(input.sourceFilePath);
     
-    driverResult.addSourceArtifact(input.sourceFilePath, sourceFileStamp);
+    requires(input.sourceFilePath, sourceFileStamp);
     
     imp = new ImportCommands(baseProcessor, env, this, str);
 
@@ -324,14 +318,14 @@ public class Driver extends Builder<DriverInput, Result> {
    * @throws TokenExpectedException 
    * @throws InterruptedException 
    */
-  protected void build(Result result) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
-    this.driverResult = result;
+  protected Result build() throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException {
+    this.driverResult = new Result();
     initDriver();
     initForSources();
     
     List<FromTo> originalRenamings = new LinkedList<FromTo>(input.renamings);
     
-    driverResult.setState(CompilationUnit.State.IN_PROGESS); 
+    setState(BuildUnit.State.IN_PROGESS); 
     boolean success = false;
     try {
       boolean done = false;
@@ -379,7 +373,7 @@ public class Driver extends Builder<DriverInput, Result> {
       stepped();
       
       // GENERATE model
-      if (!driverResult.isGenerated())
+      if (!ModuleSystemCommands.isGenerated(getBuildUnit()))
         generateModel();
       
       // COMPILE the generated java file
@@ -397,16 +391,16 @@ public class Driver extends Builder<DriverInput, Result> {
         driverResult.registerEditorDesugarings(StdLib.failureTrans);
 
       success = true;
+      return driverResult;
     } 
     finally {
       input.renamings.clear();
       input.renamings.addAll(originalRenamings);
 
       if (!interrupt) {
-        driverResult.setState(success ? CompilationUnit.State.SUCCESS : CompilationUnit.State.FAILURE);
-        driverResult.write(env.getStamper());
+        setState(success ? BuildUnit.State.SUCCESS : BuildUnit.State.FAILURE);
       } else {
-        driverResult.setState(CompilationUnit.State.SUCCESS);
+        setState(BuildUnit.State.SUCCESS);
         driverResult.setSugaredSyntaxTree(null);
       }
       
@@ -424,11 +418,12 @@ public class Driver extends Builder<DriverInput, Result> {
               baseProcessor.getGeneratedSourceFile(), 
               baseProcessor.getGeneratedSource(),
               env.getBin(),
-              driverResult,
+              this,
+              defaultStamper(),
               new ArrayList<Path>(env.getIncludePath()), 
               driverResult.getDeferredSourceFiles());
         for (Path file : generatedFiles)
-          driverResult.addGeneratedFile(file);
+          generates(file);
       } catch (ClassNotFoundException e) {
         setErrorMessage("Could not resolve imported class " + e.getMessage());
       } catch (SourceCodeException e) {
@@ -454,7 +449,7 @@ public class Driver extends Builder<DriverInput, Result> {
         List<String> additionalModules = processLanguageDec(toplevelDecl);
         for (String module : additionalModules) {
           prepareImport(toplevelDecl, module, null);
-          Path clazz = ModuleSystemCommands.importBinFile(module, env, baseProcessor, driverResult);
+          Path clazz = ModuleSystemCommands.importBinFile(module, env, baseProcessor, this);
           if (clazz == null)
             setErrorMessage(toplevelDecl, "Could not resolve required module " + module);
         }
@@ -528,7 +523,7 @@ public class Driver extends Builder<DriverInput, Result> {
       buf.append(service).append('\n');
     }
     
-    driverResult.generateFile(editorServicesFile, buf.toString());
+    generateFile(editorServicesFile, buf.toString());
   }
   
   private void processPlainDec(IStrategoTerm toplevelDecl) throws IOException {
@@ -566,7 +561,7 @@ public class Driver extends Builder<DriverInput, Result> {
       FileCommands.createFile(plainFile);
 
       log.log("writing plain content to " + plainFile, Log.DETAIL);
-      driverResult.generateFile(plainFile, plainContent);
+      generateFile(plainFile, plainContent);
     } finally {
       log.endTask();
     }
@@ -575,7 +570,7 @@ public class Driver extends Builder<DriverInput, Result> {
   
   public Pair<IStrategoTerm, Integer> currentParse(String remainingInput, ITreeBuilder treeBuilder, boolean recovery) throws IOException, InvalidParseTableException, TokenExpectedException, SGLRException {
     
-    currentGrammarTBL = sdf.compile(currentGrammarSDF, currentGrammarModule, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPackagedGrammars(), baseLanguage.getPluginDirectory());
+    currentGrammarTBL = sdf.compile(currentGrammarSDF, currentGrammarModule, ModuleSystemCommands.getTransitivelyAffectedFileStamps(getBuildUnit()).keySet(), baseLanguage.getPackagedGrammars(), baseLanguage.getPluginDirectory());
 
     ParseTable table = ATermCommands.parseTableManager.loadFromFile(currentGrammarTBL.getAbsolutePath());
     
@@ -613,7 +608,7 @@ public class Driver extends Builder<DriverInput, Result> {
   
     log.beginTask("analyze", "ANALYZE toplevel declaration.", Log.CORE);
     try {
-      currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      currentTransProg = str.compile(currentTransSTR, ModuleSystemCommands.getTransitivelyAffectedFileStamps(getBuildUnit()).keySet(), baseLanguage.getPluginDirectory());
     
       return STRCommands.execute("analyze-main", currentTransProg, term, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
@@ -635,7 +630,7 @@ public class Driver extends Builder<DriverInput, Result> {
     try {
       String currentModelName = FileCommands.dropExtension(input.sourceFilePath.getRelativePath());
       imp.setCurrentModelName(currentModelName);
-      currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      currentTransProg = str.compile(currentTransSTR, ModuleSystemCommands.getTransitivelyAffectedFileStamps(getBuildUnit()).keySet(), baseLanguage.getPluginDirectory());
 
       return STRCommands.execute("internal-main", currentTransProg, term, baseProcessor.getInterpreter());
     } catch (StrategoException e) {
@@ -761,7 +756,7 @@ public class Driver extends Builder<DriverInput, Result> {
     else {
       IStrategoTerm appl = baseLanguage.getTransformationApplication(toplevelDecl);
       
-      Pair<RelativePath, DriverBuildRequirement> transformationResult = imp.resolveModule(appl, true);
+      Pair<RelativePath, DriverBuildRequest> transformationResult = imp.resolveModule(appl, true);
       
       if (transformationResult == null)
         return null;
@@ -798,7 +793,7 @@ public class Driver extends Builder<DriverInput, Result> {
    * @throws TokenExpectedException 
    * @throws ClassNotFoundException 
    */
-  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, DriverBuildRequirement[] injectedRequirements) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  protected boolean prepareImport(IStrategoTerm toplevelDecl, String modulePath, DriverBuildRequest[] injectedRequirements) throws IOException, TokenExpectedException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     // module is in sugarj standard library
     if (modulePath.startsWith("org/sugarj"))
       return false;
@@ -819,17 +814,17 @@ public class Driver extends Builder<DriverInput, Result> {
    * @return
    * @throws InterruptedException
    */
-  public DriverBuildRequirement subcompile(RelativePath importSourceFile, BuildRequirement<?, ?, ?, ?>... injectedRequirments) throws InterruptedException {
-    BuildRequirement<?, ?, ?, ?>[] injected = ArrayUtils.arrayConcat(injectedRequirments, input.injectedRequirements);
+  public DriverBuildRequest subcompile(RelativePath importSourceFile, BuildRequest<?, ?, ?, ?>... injectedRequirments) throws InterruptedException {
+    BuildRequest<?, ?, ?, ?>[] injected = ArrayUtils.arrayConcat(injectedRequirments, input.injectedRequirements);
     try {
       if ("model".equals(FileCommands.getExtension(importSourceFile))) {
         IStrategoTerm term = ATermCommands.atermFromFile(importSourceFile.getAbsolutePath());
         DriverInput subinput = new DriverInput(input.getOriginalEnvironment(), baseLanguage, importSourceFile, term, null, null, input.renamings, input.monitor, injected);
-        return new DriverBuildRequirement(subinput);
+        return new DriverBuildRequest(subinput);
       }
       else {
         DriverInput subinput = new DriverInput(input.getOriginalEnvironment(), baseLanguage, importSourceFile, null, null, input.renamings, input.monitor, injected);
-        return new DriverBuildRequirement(subinput);
+        return new DriverBuildRequest(subinput);
       }
     } catch (IOException e) {
       setErrorMessage("Problems while compiling " + importSourceFile + ": " + e.getMessage());
@@ -842,33 +837,33 @@ public class Driver extends Builder<DriverInput, Result> {
   private boolean processImport(String modulePath, IStrategoTerm importTerm) throws IOException {
     boolean success = false;
     
-    Path clazz = ModuleSystemCommands.importBinFile(modulePath, env, baseProcessor, driverResult);
+    Path clazz = ModuleSystemCommands.importBinFile(modulePath, env, baseProcessor, this);
     if (clazz != null || baseProcessor.isModuleExternallyResolvable(modulePath)) {
       success = true;
       baseProcessor.processModuleImport(importTerm);
     }
 
-    Path sdf = ModuleSystemCommands.importSdf(modulePath, env, driverResult);
+    Path sdf = ModuleSystemCommands.importSdf(modulePath, env, this);
     if (sdf != null) {
       success = true;
       availableSDFImports.add(modulePath);
       buildCompoundSdfModule();
     }
     
-    Path str = ModuleSystemCommands.importStratego(modulePath, env, driverResult);
+    Path str = ModuleSystemCommands.importStratego(modulePath, env, this);
     if (str != null) {
       success = true;
       availableSTRImports.add(modulePath);
       buildCompoundStrModule();
     }
     
-    success |= ModuleSystemCommands.importEditorServices(modulePath, env, driverResult);
+    success |= ModuleSystemCommands.importEditorServices(modulePath, env, this);
     
     return success;
   }
   
   private boolean processModelImport(String modulePath) throws IOException {
-    RelativePath model = ModuleSystemCommands.importModel(modulePath, env, driverResult);
+    RelativePath model = ModuleSystemCommands.importModel(modulePath, env, this);
     if (model != null) {
 //      availableModels.add(model);
       return true;
@@ -895,7 +890,7 @@ public class Driver extends Builder<DriverInput, Result> {
       return ;
     }
     
-    RelativePath importModelPath = ModuleSystemCommands.importModel(importModelResult.a, env, driverResult);
+    RelativePath importModelPath = ModuleSystemCommands.importModel(importModelResult.a, env, this);
     if (importModelPath == null) {
       setErrorMessage(toplevelDecl, "Cannot locate generated model: " + importModelResult.a);
       return ;
@@ -908,9 +903,9 @@ public class Driver extends Builder<DriverInput, Result> {
     FromTo renaming = new FromTo(importModelPath, thisModelPath);
     IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
     ATermCommands.atermToFile(thisModel, thisModelPath);
-    driverResult.addGeneratedFile(thisModelPath);
+    generates(thisModelPath);
 
-    subcompile(thisModelPath, new DriverBuildRequirement(input));
+    subcompile(thisModelPath, new DriverBuildRequest(input));
   }
 
   private List<String> processLanguageDec(IStrategoTerm toplevelDecl) throws IOException {
@@ -972,7 +967,7 @@ public class Driver extends Builder<DriverInput, Result> {
       String sdfExtensionContent = SDFCommands.prettyPrintSDF(sdfExtract, baseProcessor.getInterpreter());
 
       String sdfSource = SDFCommands.makePermissiveSdf(sdfExtensionHead + sdfExtensionContent);
-      driverResult.generateFile(sdfExtension, sdfSource);
+      generateFile(sdfExtension, sdfSource);
       availableSDFImports.add(fullExtName);
       
       if (CommandExecution.FULL_COMMAND_LINE)
@@ -997,7 +992,7 @@ public class Driver extends Builder<DriverInput, Result> {
         strExtensionContent += strImports;
         
       
-      driverResult.generateFile(strExtension, strExtensionContent);
+      generateFile(strExtension, strExtensionContent);
       availableSTRImports.add(fullExtName);
       
       if (CommandExecution.FULL_COMMAND_LINE)
@@ -1064,7 +1059,7 @@ public class Driver extends Builder<DriverInput, Result> {
       else
         strExtensionContent += strImports;
             
-      driverResult.generateFile(strExtension, strExtensionContent);
+      generateFile(strExtension, strExtensionContent);
       availableSTRImports.add(fullExtName);
       
       log.log("Wrote Stratego file to '" + strExtension.getAbsolutePath() + "'.", Log.DETAIL);
@@ -1117,10 +1112,10 @@ public class Driver extends Builder<DriverInput, Result> {
       
       IStrategoTerm modelTerm = makeDesugaredSyntaxTree();
       String string = ATermCommands.atermToString(modelTerm);
-      driverResult.generateFile(modelOutFile, string);
+      generateFile(modelOutFile, string);
       
       if (input.sourceFilePath.equals(modelOutFile))
-        driverResult.addGeneratedFile(modelOutFile);
+        generates(modelOutFile);
     } finally {
       log.endTask();
     }
@@ -1156,7 +1151,7 @@ public class Driver extends Builder<DriverInput, Result> {
     log.beginTask("checking grammar", "CHECK current grammar", Log.CORE);
     
     try {
-      sdf.compile(currentGrammarSDF, currentGrammarModule, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPackagedGrammars(), baseLanguage.getPluginDirectory());
+      sdf.compile(currentGrammarSDF, currentGrammarModule, ModuleSystemCommands.getTransitivelyAffectedFileStamps(getBuildUnit()).keySet(), baseLanguage.getPackagedGrammars(), baseLanguage.getPluginDirectory());
     } finally {
       log.endTask();
     }
@@ -1166,7 +1161,7 @@ public class Driver extends Builder<DriverInput, Result> {
     log.beginTask("checking transformation", "CHECK current transformation", Log.CORE);
     
     try {
-      currentTransProg = str.compile(currentTransSTR, driverResult.getTransitivelyAffectedFiles(), baseLanguage.getPluginDirectory());
+      currentTransProg = str.compile(currentTransSTR, ModuleSystemCommands.getTransitivelyAffectedFileStamps(getBuildUnit()).keySet(), baseLanguage.getPluginDirectory());
     } catch (StrategoException e) {
       String msg = e.getClass().getName() + " " + e.getLocalizedMessage() != null ? e.getLocalizedMessage() : e.toString();
       log.logErr(msg, Log.DETAIL);
@@ -1421,4 +1416,10 @@ public class Driver extends Builder<DriverInput, Result> {
   public String toString() {
     return "Driver(" + input.sourceFilePath + ")";
   }
+  
+  public void generateFile(Path file, String content) throws IOException {
+    FileCommands.writeToFile(file, content);
+    generates(file);
+  }
+
 }

@@ -6,10 +6,9 @@ import java.util.Collections;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.strategoxt.HybridInterpreter;
-import org.sugarj.cleardep.CompilationUnit;
-import org.sugarj.cleardep.build.BuildManager;
 import org.sugarj.cleardep.build.Builder;
 import org.sugarj.cleardep.build.BuilderFactory;
+import org.sugarj.cleardep.output.SimpleOutput;
 import org.sugarj.cleardep.stamp.ContentHashStamper;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
@@ -18,23 +17,23 @@ import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
 
-public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, CompilationUnit> {
+public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, SimpleOutput<IStrategoTerm>> {
 
-  public final static BuilderFactory<Input, CompilationUnit, TransformModelBuilder> factory = new BuilderFactory<Input, CompilationUnit, TransformModelBuilder>() {
+  public final static BuilderFactory<Input, SimpleOutput<IStrategoTerm>, TransformModelBuilder> factory = new BuilderFactory<Input, SimpleOutput<IStrategoTerm>, TransformModelBuilder>() {
     private static final long serialVersionUID = -2879215256932097082L;
 
     @Override
-    public TransformModelBuilder makeBuilder(Input input, BuildManager manager) {
-      return new TransformModelBuilder(input, this, manager);
+    public TransformModelBuilder makeBuilder(Input input) {
+      return new TransformModelBuilder(input);
     }
   };
   
   public static class Input implements Serializable {
     private static final long serialVersionUID = -5434098091972595166L;
     public final RelativePath modelPath;
-    public final DriverBuildRequirement modelReq;
+    public final DriverBuildRequest modelReq;
     public final RelativePath transformationPath;
-    public final DriverBuildRequirement transformationReq;
+    public final DriverBuildRequest transformationReq;
     public final IStrategoTerm toplevelDecl;
     public final RelativePath outputPath;
     public final STRCommands strCommands;
@@ -42,7 +41,7 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
     public final ImportCommands importCommands;
     public final HybridInterpreter strInterpreter;
 
-    public Input(RelativePath modelPath, DriverBuildRequirement modelReq, RelativePath transformationPath, DriverBuildRequirement transformationReq, IStrategoTerm toplevelDecl, RelativePath outputPath, STRCommands strCommands, Path baseLanguageDir, ImportCommands importCommands, HybridInterpreter strInterpreter) {
+    public Input(RelativePath modelPath, DriverBuildRequest modelReq, RelativePath transformationPath, DriverBuildRequest transformationReq, IStrategoTerm toplevelDecl, RelativePath outputPath, STRCommands strCommands, Path baseLanguageDir, ImportCommands importCommands, HybridInterpreter strInterpreter) {
       this.modelPath = modelPath;
       this.modelReq = modelReq;
       this.transformationPath = transformationPath;
@@ -56,8 +55,8 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
     }
   }
 
-  public TransformModelBuilder(Input input, BuilderFactory<Input, CompilationUnit, ? extends Builder<Input, CompilationUnit>> sourceFactory, BuildManager manager) {
-    super(input, sourceFactory, manager);
+  public TransformModelBuilder(Input input) {
+    super(input);
   }
 
   @Override
@@ -71,26 +70,21 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
   }
 
   @Override
-  protected Class<CompilationUnit> resultClass() {
-    return CompilationUnit.class;
-  }
-
-  @Override
   protected Stamper defaultStamper() {
     return ContentHashStamper.instance;
   }
 
   @Override
-  protected void build(CompilationUnit result) throws Throwable {
+  protected SimpleOutput<IStrategoTerm> build() throws Throwable {
     require(input.modelReq);
-    Result transformationResult = require(input.transformationReq);
+    require(input.transformationReq);
 
     IStrategoTerm modelTerm = ATermCommands.atermFromFile(input.modelPath.getAbsolutePath());
     String modelName = FileCommands.dropExtension(input.modelPath.getRelativePath());
     String transName = FileCommands.dropExtension(input.transformationPath.getRelativePath());
     String strat = "main-" + transName.replace('/', '_');
 
-    Path trans = input.strCommands.compile(input.transformationPath, transformationResult.getTransitivelyAffectedFiles(), input.baseLanguageDir);
+    Path trans = input.strCommands.compile(input.transformationPath, ModuleSystemCommands.getTransitivelyAffectedFileStamps(getBuildUnit()).keySet(), input.baseLanguageDir);
 
     IStrategoTerm transformedTerm;
     try {
@@ -106,7 +100,8 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
     IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, input.modelPath, input.outputPath, trans, input.toplevelDecl);
     String transformedModelText = ATermCommands.atermToString(renamedTransformedModel);
     FileCommands.writeToFile(input.outputPath, transformedModelText);
-    result.addGeneratedFile(input.outputPath);
+    generates(input.outputPath);
+    return new SimpleOutput<>(renamedTransformedModel);
   }
 
   private IStrategoTerm renameModel(IStrategoTerm transformedModel, RelativePath modelPath, RelativePath transformedModelPath, Path compiledTrans, IStrategoTerm toplevelDecl) throws IOException {

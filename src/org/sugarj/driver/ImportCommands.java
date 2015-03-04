@@ -10,7 +10,7 @@ import org.spoofax.jsglr.shared.SGLRException;
 import org.spoofax.jsglr.shared.TokenExpectedException;
 import org.strategoxt.lang.StrategoException;
 import org.sugarj.AbstractBaseProcessor;
-import org.sugarj.cleardep.build.BuildRequirement;
+import org.sugarj.cleardep.build.BuildRequest;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.Path;
@@ -46,17 +46,17 @@ public class ImportCommands {
    * @param asModel If true, looks for models. If false, looks for transformations.
    * @return
    */
-  public Pair<RelativePath, DriverBuildRequirement> resolveModule(IStrategoTerm term, boolean asModel) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  public Pair<RelativePath, DriverBuildRequest> resolveModule(IStrategoTerm term, boolean asModel) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     if (ATermCommands.isApplication(term, "TransApp")) {
       IStrategoTerm model = ATermCommands.getApplicationSubterm(term, "TransApp", 1);
       IStrategoTerm transformation = ATermCommands.getApplicationSubterm(term, "TransApp", 0);
       
-      Pair<RelativePath, DriverBuildRequirement> resolvedModel = resolveModule(model, true);
-      Pair<RelativePath, DriverBuildRequirement> resolvedTransformation = resolveModule(transformation, false);
+      Pair<RelativePath, DriverBuildRequest> resolvedModel = resolveModule(model, true);
+      Pair<RelativePath, DriverBuildRequest> resolvedTransformation = resolveModule(transformation, false);
       
-      Pair<RelativePath, ? extends BuildRequirement<?,?,?,?>> transformedModel = transformModel(resolvedModel.a, resolvedModel.b, resolvedTransformation.a, resolvedTransformation.b, term);
+      Pair<RelativePath, ? extends BuildRequest<?,?,?,?>> transformedModel = transformModel(resolvedModel.a, resolvedModel.b, resolvedTransformation.a, resolvedTransformation.b, term);
       RelativePath sourceFile = transformedModel.a;
-      DriverBuildRequirement req = driver.subcompile(sourceFile, transformedModel.b);
+      DriverBuildRequest req = driver.subcompile(sourceFile, transformedModel.b);
       return Pair.create(sourceFile, req);
     }
     else {
@@ -69,7 +69,7 @@ public class ImportCommands {
       if (importSourceFile == null)
         return null;
       
-      DriverBuildRequirement req = driver.subcompile(importSourceFile);
+      DriverBuildRequest req = driver.subcompile(importSourceFile);
       return Pair.create(importSourceFile, req);
     }
   }
@@ -84,7 +84,7 @@ public class ImportCommands {
    * @param driver
    * @return a pair consisting of the path to the transformed model and a flag indicating a circular import (if true). 
    */
-  public Pair<RelativePath, ? extends BuildRequirement<?,?,?,?>> transformModel(RelativePath modelPath, DriverBuildRequirement modelReq, RelativePath transformationPath, DriverBuildRequirement transformationReq, IStrategoTerm term) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
+  public Pair<RelativePath, ? extends BuildRequest<?,?,?,?>> transformModel(RelativePath modelPath, DriverBuildRequest modelReq, RelativePath transformationPath, DriverBuildRequest transformationReq, IStrategoTerm term) throws TokenExpectedException, IOException, ParseException, InvalidParseTableException, SGLRException, InterruptedException, ClassNotFoundException {
     RelativePath transformedModelPath = Renaming.getTransformedModelSourceFilePath(modelPath, transformationPath, environment);
     RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(FileCommands.dropExtension(transformedModelPath.getRelativePath()), driver.getEnvironment().getSourcePath(), baseProcessor, driver.getEnvironment());
     
@@ -99,7 +99,7 @@ public class ImportCommands {
         baseProcessor.getLanguage().getPluginDirectory(), 
         this, 
         baseProcessor.getInterpreter());
-    BuildRequirement<?, ?, ?, ?> req = new BuildRequirement<>(TransformModelBuilder.factory, input);
+    BuildRequest<?, ?, ?, ?> req = new BuildRequest<>(TransformModelBuilder.factory, input);
     return Pair.create(importSourceFile, req);
   }
   
