@@ -8,7 +8,6 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.sugarj.AbstractBaseLanguage;
 import org.sugarj.BaseLanguageRegistry;
-import org.sugarj.cleardep.BuildUnit;
 import org.sugarj.cleardep.build.BuildManager;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.FileCommands;
@@ -60,11 +59,10 @@ public class Main {
         if (null == lang)
           throw new RuntimeException("Unknown file extension \"" + FileCommands.getExtension(sourceFile) + "\".");
         
-        BuildManager manager = BuildManager.acquire();
         DriverInput input = new DriverInput(environment, lang, sourceFile, monitor);
-        BuildUnit<Result> res = manager.require(new DriverBuildRequest(input));
+        Result res = BuildManager.build(new DriverBuildRequest(input));
     
-        DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res.getBuildResult(), sourceFile, new File(".").getAbsolutePath());
+        DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath());
         switch (returnValue) {
         case SUCCESS:
           exit (0, environment);
