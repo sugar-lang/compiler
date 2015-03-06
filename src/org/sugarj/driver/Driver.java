@@ -405,6 +405,7 @@ public class Driver extends Builder<DriverInput, Result> {
       }
       
       Driver.storeCaches(env);
+      getBuildUnit().setBuildResult(driverResult);
       ProcessingListener.notifyProcessingDone(Driver.class, processingListener, getBuildUnit());
     }
   }
