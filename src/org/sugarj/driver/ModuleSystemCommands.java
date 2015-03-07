@@ -231,42 +231,6 @@ public class ModuleSystemCommands {
     return null;
   }
   
-  public static BuildUnit<Result> locateResult(String modulePath, Environment env, BuildRequest<?, Result, ?, ?> req) throws IOException {
-    RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
-    
-    BuildUnit<Result> result = BuildUnit.read(dep, req);
-    if (result != null)
-      return result;
-    
-    for (Path base : env.getIncludePath()) {
-      dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
-      
-      result = BuildUnit.read(dep, req);
-      if (result != null)
-        return result;
-    }
-    
-    return null;
-  }
-  
-  public static BuildUnit<Result> locateConsistentResult(String modulePath, Environment env, Map<RelativePath, Stamp> sourceFiles, BuildRequest<?, Result, ?, ?> req) throws IOException {
-    RelativePath dep = new RelativePath(env.getBin(), FileCommands.dropExtension(modulePath) + ".dep");
-    
-    BuildUnit<Result> result = BuildUnit.readConsistent(dep, req, sourceFiles);
-    if (result != null)
-      return result;
-    
-    for (Path base : env.getIncludePath()) {
-      dep = new RelativePath(base, FileCommands.dropExtension(modulePath) + ".dep");
-      
-      result = BuildUnit.readConsistent(dep, req, sourceFiles);
-      if (result != null)
-        return result;
-    }
-    
-    return null;
-  }
-  
   public static boolean isGenerated(BuildUnit<Result> unit) {
     @SuppressWarnings("unchecked")
     BuildRequest<DriverInput, Result, ?, ?> genBy = (BuildRequest<DriverInput, Result, ?, ?>) unit.getGeneratedBy();
