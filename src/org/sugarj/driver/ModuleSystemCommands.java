@@ -174,7 +174,7 @@ public class ModuleSystemCommands {
 
   private static RelativePath searchFile(RelativePath file, Driver driver) {
     if (driver != null)
-      driver.requires(file);
+      driver.require(file);
     if (file.getFile().exists())
       return file;
     

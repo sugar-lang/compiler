@@ -38,7 +38,7 @@ import org.strategoxt.stratego_gpp.box2text_string_0_1;
 import org.strategoxt.stratego_sdf.pp_sdf_box_0_0;
 import org.strategoxt.strc.pp_stratego_string_0_0;
 import org.strategoxt.tools.main_pack_sdf_0_0;
-import org.sugarj.cleardep.stamp.ContentHashStamper;
+import org.sugarj.cleardep.stamp.FileHashStamper;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
@@ -110,7 +110,7 @@ public class SDFCommands {
     
     for (Path grammarFile : baseLanguageGrammars) {
       Map<String, Stamp> map = new HashMap<String, Stamp>();
-      map.put(grammarFile.getAbsolutePath(), ContentHashStamper.instance.stampOf(grammarFile));
+      map.put(grammarFile.getAbsolutePath(), FileHashStamper.instance.stampOf(grammarFile));
       ModuleKey key = new ModuleKey(map, ""); 
       Path permissiveGrammar = lookupGrammarInCache(sdfCache, key);
       if (permissiveGrammar == null) {

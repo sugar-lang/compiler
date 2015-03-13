@@ -43,7 +43,7 @@ import org.sugarj.cleardep.BuildUnit;
 import org.sugarj.cleardep.build.BuildRequest;
 import org.sugarj.cleardep.build.Builder;
 import org.sugarj.cleardep.build.RequiredBuilderFailed;
-import org.sugarj.cleardep.stamp.ContentHashStamper;
+import org.sugarj.cleardep.stamp.FileHashStamper;
 import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
@@ -233,7 +233,7 @@ public class Driver extends Builder<DriverInput, Result> {
   
   @Override
   protected Stamper defaultStamper() {
-    return ContentHashStamper.instance;
+    return FileHashStamper.instance;
   }
   
   private void initDriver() {
@@ -282,7 +282,7 @@ public class Driver extends Builder<DriverInput, Result> {
   private void initForSources() throws IOException, TokenExpectedException, SGLRException, InterruptedException {
     if (input.injectedRequirements != null)
       for (BuildRequest<?, ?, ?, ?> req : input.injectedRequirements)
-        require(req);
+        requireBuild(req);
     
     Stamp sourceFileStamp = input.editedSourceStamp;
     if (sourceFileStamp == null)
@@ -291,7 +291,7 @@ public class Driver extends Builder<DriverInput, Result> {
     if (source == null)
       source = FileCommands.readFileAsString(input.sourceFilePath);
     
-    requires(input.sourceFilePath, sourceFileStamp);
+    require(input.sourceFilePath, sourceFileStamp);
     
     imp = new ImportCommands(baseProcessor, env, this, str);
 
@@ -425,7 +425,7 @@ public class Driver extends Builder<DriverInput, Result> {
               new ArrayList<Path>(env.getIncludePath()), 
               driverResult.getDeferredSourceFiles());
         for (Path file : generatedFiles)
-          generates(file);
+          generate(file);
       } catch (ClassNotFoundException e) {
         setErrorMessage("Could not resolve imported class " + e.getMessage());
       } catch (SourceCodeException e) {
@@ -763,7 +763,7 @@ public class Driver extends Builder<DriverInput, Result> {
       if (transformationResult == null)
         return null;
       
-      require(transformationResult.b);
+      requireBuild(transformationResult.b);
       
       String modulePath = FileCommands.dropExtension(transformationResult.a.getRelativePath());
       String localModelName = baseProcessor.getImportLocalName(toplevelDecl);
@@ -802,7 +802,7 @@ public class Driver extends Builder<DriverInput, Result> {
     
     RelativePath importSourceFile = ModuleSystemCommands.locateSourceFileOrModel(modulePath, env.getSourcePath(), baseProcessor, env);
     if (importSourceFile != null)
-      require(subcompile(importSourceFile, injectedRequirements));
+      requireBuild(subcompile(importSourceFile, injectedRequirements));
 
     // TODO support circular imports again
 
@@ -905,7 +905,7 @@ public class Driver extends Builder<DriverInput, Result> {
     FromTo renaming = new FromTo(importModelPath, thisModelPath);
     IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
     ATermCommands.atermToFile(thisModel, thisModelPath);
-    generates(thisModelPath);
+    generate(thisModelPath);
 
     subcompile(thisModelPath, new DriverBuildRequest(input));
   }
@@ -1117,7 +1117,7 @@ public class Driver extends Builder<DriverInput, Result> {
       generateFile(modelOutFile, string);
       
       if (input.sourceFilePath.equals(modelOutFile))
-        generates(modelOutFile);
+        generate(modelOutFile);
     } finally {
       log.endTask();
     }
@@ -1421,7 +1421,7 @@ public class Driver extends Builder<DriverInput, Result> {
   
   public void generateFile(Path file, String content) throws IOException {
     FileCommands.writeToFile(file, content);
-    generates(file);
+    generate(file);
   }
 
 }

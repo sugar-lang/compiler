@@ -9,7 +9,7 @@ import org.strategoxt.HybridInterpreter;
 import org.sugarj.cleardep.build.Builder;
 import org.sugarj.cleardep.build.BuilderFactory;
 import org.sugarj.cleardep.output.SimpleOutput;
-import org.sugarj.cleardep.stamp.ContentHashStamper;
+import org.sugarj.cleardep.stamp.FileHashStamper;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
@@ -71,13 +71,13 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
 
   @Override
   protected Stamper defaultStamper() {
-    return ContentHashStamper.instance;
+    return FileHashStamper.instance;
   }
 
   @Override
   protected SimpleOutput<IStrategoTerm> build() throws Throwable {
-    require(input.modelReq);
-    require(input.transformationReq);
+    requireBuild(input.modelReq);
+    requireBuild(input.transformationReq);
 
     IStrategoTerm modelTerm = ATermCommands.atermFromFile(input.modelPath.getAbsolutePath());
     String modelName = FileCommands.dropExtension(input.modelPath.getRelativePath());
@@ -100,7 +100,7 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
     IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, input.modelPath, input.outputPath, trans, input.toplevelDecl);
     String transformedModelText = ATermCommands.atermToString(renamedTransformedModel);
     FileCommands.writeToFile(input.outputPath, transformedModelText);
-    generates(input.outputPath);
+    generate(input.outputPath);
     return new SimpleOutput<>(renamedTransformedModel);
   }
 
