@@ -8,7 +8,6 @@ import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.strategoxt.HybridInterpreter;
 import org.sugarj.cleardep.build.Builder;
 import org.sugarj.cleardep.build.BuilderFactory;
-import org.sugarj.cleardep.output.SimpleOutput;
 import org.sugarj.cleardep.stamp.FileHashStamper;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
@@ -17,9 +16,9 @@ import org.sugarj.common.path.Path;
 import org.sugarj.common.path.RelativePath;
 import org.sugarj.driver.Renaming.FromTo;
 
-public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, SimpleOutput<IStrategoTerm>> {
+public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, IStrategoTerm> {
 
-  public final static BuilderFactory<Input, SimpleOutput<IStrategoTerm>, TransformModelBuilder> factory = new BuilderFactory<Input, SimpleOutput<IStrategoTerm>, TransformModelBuilder>() {
+  public final static BuilderFactory<Input, IStrategoTerm, TransformModelBuilder> factory = new BuilderFactory<Input, IStrategoTerm, TransformModelBuilder>() {
     private static final long serialVersionUID = -2879215256932097082L;
 
     @Override
@@ -75,7 +74,7 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
   }
 
   @Override
-  protected SimpleOutput<IStrategoTerm> build() throws Throwable {
+  protected IStrategoTerm build() throws Throwable {
     requireBuild(input.modelReq);
     requireBuild(input.transformationReq);
 
@@ -101,7 +100,7 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
     String transformedModelText = ATermCommands.atermToString(renamedTransformedModel);
     FileCommands.writeToFile(input.outputPath, transformedModelText);
     generate(input.outputPath);
-    return new SimpleOutput<>(renamedTransformedModel);
+    return renamedTransformedModel;
   }
 
   private IStrategoTerm renameModel(IStrategoTerm transformedModel, RelativePath modelPath, RelativePath transformedModelPath, Path compiledTrans, IStrategoTerm toplevelDecl) throws IOException {

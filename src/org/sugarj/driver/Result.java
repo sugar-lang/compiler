@@ -4,6 +4,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,7 +16,6 @@ import java.util.Set;
 
 import org.spoofax.interpreter.terms.IStrategoTerm;
 import org.spoofax.jsglr.shared.BadTokenException;
-import org.sugarj.cleardep.output.BuildOutput;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.path.Path;
@@ -23,7 +23,7 @@ import org.sugarj.common.path.Path;
 /**
  * @author Sebastian Erdweg <seba at informatik uni-marburg de>
  */
-public class Result implements BuildOutput, Externalizable {
+public class Result implements Serializable, Externalizable {
 
   public static final long serialVersionUID = 2546270233774434268L;
 
@@ -62,7 +62,7 @@ public class Result implements BuildOutput, Externalizable {
     return editorServices;
   }
   
-  @Override
+  // TODO encode via OutputStamper
   public boolean isConsistent() {
     if (desugaringsFile != null && !FileCommands.exists(desugaringsFile))
       return false;
