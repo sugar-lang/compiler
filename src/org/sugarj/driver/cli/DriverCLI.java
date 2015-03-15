@@ -33,7 +33,7 @@ import org.spoofax.terms.TermVisitor;
 import org.strategoxt.HybridInterpreter;
 import org.strategoxt.imp.runtime.Environment;
 import org.sugarj.common.ATermCommands;
-import org.sugarj.common.CommandExecution;
+import org.sugarj.common.Exec;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.path.AbsolutePath;
@@ -353,7 +353,7 @@ public class DriverCLI {
 
   /**
    * Parses and processes command line options. This method may
-   * set paths and flags in {@link CommandExecution} and
+   * set paths and flags in {@link Exec} and
    * {@link Environment} in the process.
    * 
    * @param args
@@ -426,16 +426,16 @@ public class DriverCLI {
     }
   
     if (line.hasOption("silent-execution"))
-      CommandExecution.SILENT_EXECUTION = true;
+      Exec.SILENT_EXECUTION = true;
   
     if (line.hasOption("sub-silent-execution"))
-      CommandExecution.SUB_SILENT_EXECUTION = true;
+      Exec.SUB_SILENT_EXECUTION = true;
   
     if (line.hasOption("full-command-line"))
-      CommandExecution.FULL_COMMAND_LINE = true;
+      Exec.FULL_COMMAND_LINE = true;
   
     if (line.hasOption("cache-info"))
-      CommandExecution.CACHE_INFO = true;
+      Exec.CACHE_INFO = true;
   
     if (line.hasOption("buildpath"))
       for (String path : line.getOptionValue("buildpath").split(File.pathSeparator))

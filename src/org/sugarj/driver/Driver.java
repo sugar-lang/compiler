@@ -48,7 +48,7 @@ import org.sugarj.cleardep.stamp.Stamp;
 import org.sugarj.cleardep.stamp.Stamper;
 import org.sugarj.common.ATermCommands;
 import org.sugarj.common.ATermCommands.PrettyPrintError;
-import org.sugarj.common.CommandExecution;
+import org.sugarj.common.Exec;
 import org.sugarj.common.FileCommands;
 import org.sugarj.common.Log;
 import org.sugarj.common.StringCommands;
@@ -972,7 +972,7 @@ public class Driver extends Builder<DriverInput, Result> {
       generateFile(sdfExtension, sdfSource);
       availableSDFImports.add(fullExtName);
       
-      if (CommandExecution.FULL_COMMAND_LINE)
+      if (Exec.FULL_COMMAND_LINE)
         log.log("Wrote SDF file to '" + sdfExtension.getAbsolutePath() + "'.", Log.DETAIL);
       
       String strExtensionTerm = "Module(" + "\"" + fullExtName+ "\"" + ", " + strExtract + ")" + "\n";
@@ -997,7 +997,7 @@ public class Driver extends Builder<DriverInput, Result> {
       generateFile(strExtension, strExtensionContent);
       availableSTRImports.add(fullExtName);
       
-      if (CommandExecution.FULL_COMMAND_LINE)
+      if (Exec.FULL_COMMAND_LINE)
         log.log("Wrote Stratego file to '" + strExtension.getAbsolutePath() + "'.", Log.DETAIL);
       
       processEditorServices(extName, editorExtract);
