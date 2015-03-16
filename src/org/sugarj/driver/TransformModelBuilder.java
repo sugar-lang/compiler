@@ -99,7 +99,7 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
     IStrategoTerm renamedTransformedModel = renameModel(transformedTerm, input.modelPath, input.outputPath, trans, input.toplevelDecl);
     String transformedModelText = ATermCommands.atermToString(renamedTransformedModel);
     FileCommands.writeToFile(input.outputPath, transformedModelText);
-    generate(input.outputPath);
+    provide(input.outputPath);
     return renamedTransformedModel;
   }
 

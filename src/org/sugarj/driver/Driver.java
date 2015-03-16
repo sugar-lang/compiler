@@ -425,7 +425,7 @@ public class Driver extends Builder<DriverInput, Result> {
               new ArrayList<Path>(env.getIncludePath()), 
               driverResult.getDeferredSourceFiles());
         for (Path file : generatedFiles)
-          generate(file);
+          provide(file);
       } catch (ClassNotFoundException e) {
         setErrorMessage("Could not resolve imported class " + e.getMessage());
       } catch (SourceCodeException e) {
@@ -905,7 +905,7 @@ public class Driver extends Builder<DriverInput, Result> {
     FromTo renaming = new FromTo(importModelPath, thisModelPath);
     IStrategoTerm thisModel = imp.renameModel(importModel, renaming, currentTransProg, toplevelDecl, importModelPath.getAbsolutePath());
     ATermCommands.atermToFile(thisModel, thisModelPath);
-    generate(thisModelPath);
+    provide(thisModelPath);
 
     subcompile(thisModelPath, new DriverBuildRequest(input));
   }
@@ -1117,7 +1117,7 @@ public class Driver extends Builder<DriverInput, Result> {
       generateFile(modelOutFile, string);
       
       if (input.sourceFilePath.equals(modelOutFile))
-        generate(modelOutFile);
+        provide(modelOutFile);
     } finally {
       log.endTask();
     }
@@ -1421,7 +1421,7 @@ public class Driver extends Builder<DriverInput, Result> {
   
   public void generateFile(Path file, String content) throws IOException {
     FileCommands.writeToFile(file, content);
-    generate(file);
+    provide(file);
   }
 
 }
