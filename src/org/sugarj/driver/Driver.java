@@ -221,7 +221,7 @@ public class Driver extends Builder<DriverInput, Result> {
   }
   
   @Override
-  protected String taskDescription() {
+  protected String description() {
     return "Process SugarLang files " + input.sourceFilePath;
   }
 

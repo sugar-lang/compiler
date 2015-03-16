@@ -59,7 +59,7 @@ public class TransformModelBuilder extends Builder<TransformModelBuilder.Input, 
   }
 
   @Override
-  protected String taskDescription() {
+  protected String description() {
     return "Transform model " + FileCommands.fileName(input.modelPath) + " with transformation " + FileCommands.fileName(input.transformationPath);
   }
 
