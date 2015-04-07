@@ -21,7 +21,7 @@ public abstract class ProcessingListener {
     synchronized (owner) {
       it = listeners.iterator();
     }
-    for (;it.hasNext();)
+    while (it.hasNext())
       it.next().processingStarts(sourceFiles);
   }
   
@@ -30,7 +30,7 @@ public abstract class ProcessingListener {
     synchronized (owner) {
       it = listeners.iterator();
     }
-    for (;it.hasNext();)
+    while (it.hasNext())
       it.next().processingDone(result);
   }
 }
