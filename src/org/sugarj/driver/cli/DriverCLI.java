@@ -147,50 +147,53 @@ public class DriverCLI {
     if (hasNotes) {
       return CLI_ExitValue.DSL_ANALYSIS_NOTE;
     }
-    
     if (success) {
       return CLI_ExitValue.SUCCESS;
     }
     return CLI_ExitValue.FAILURE;
   }
-  
+
   private static boolean processAnalysisResults(IStrategoList errors, String type) throws IOException {
-    for (IStrategoTerm note : errors.getAllSubterms()) {
-      if (note.getTermType() == IStrategoTerm.LIST) {
-        for (IStrategoTerm deepNote : note.getAllSubterms()) {
-          reportCLI(deepNote, type);
-          return false;
+    boolean noError = true;
+    if (errors.getSubtermCount() == 0)
+      return noError;
+    else
+      for (IStrategoTerm note : errors.getAllSubterms()) {
+        if (note.getTermType() == IStrategoTerm.LIST) {
+          if (note.getSubtermCount() > 0) {
+            for (IStrategoTerm deepNote : note.getAllSubterms()) {
+              reportCLI(deepNote, type);
+            }
+            noError = false;
+          }
+        } else {
+          reportCLI(note, type);
+          noError = false;
         }
-      } else {
-        reportCLI(note, type);
-        return false;
       }
-    }
-    return true;
+    return noError;
   }
-  
+
   private static void reportCLI(IStrategoTerm pairOrList, String kind) throws IOException {
     assert pairOrList.getTermType() == IStrategoTerm.TUPLE && pairOrList.getSubtermCount() == 2;
-    
+
     IStrategoTerm term = Tools.termAt(pairOrList, 0);
     IStrategoString msg = Tools.termAt(pairOrList, 1);
-    
+
     IToken left = ImploderAttachment.getLeftToken(term);
     IToken right = ImploderAttachment.getRightToken(term);
-    
+
     if (left == null && right != null)
       left = right;
     else if (left != null && right == null)
       right = left;
-    
+
     if (left == null || right == null)
       log.log(kind + ": " + msg + "\n  in tree " + ATermCommands.atermToFile(term), Log.ALWAYS);
     else
       log.log(kind + ": line " + left.getLine() + " column " + left.getColumn() + " to line " + right.getLine() + " column " + right.getColumn() + ":\n  " + msg, Log.ALWAYS);
   }
-  
-  
-  
+
   /**
    * Report WATER + INSERT errors from parse tree
    */
