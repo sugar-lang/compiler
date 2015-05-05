@@ -14,6 +14,9 @@ public class SugarJPrimitivesLibrary extends AbstractStrategoOperatorRegistry {
   public static final String REGISTRY_NAME = "SUGARJ";
   
   public SugarJPrimitivesLibrary(Driver driver, ImportCommands importCommands) {
+    add(new IsLastToplevelDeclaration(driver));
+    add(new GeneratePPTable(driver));
+    add(new PrettyPrint(driver));
     add(new ATermToString());
 //    add(new CurrentPackage(driver));
 //    add(new CurrentModule(driver));
