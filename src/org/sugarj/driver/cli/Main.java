@@ -97,7 +97,7 @@ public class Main {
     Environment environment = new Environment(StdLib.stdLibDir, Stamper.DEFAULT);
     environment.setCacheDir(new RelativePath(new AbsolutePath(FileCommands.TMP_DIR), ".sugarjcache"));
     environment.addToSourcePath(new AbsolutePath("."));
-    environment.setAtomicImportParsing(true);
+    environment.setAtomicImportParsing(false);
     environment.setNoChecking(true);
     environment.setMode(new CompilerMode(new AbsolutePath("."), false));
     
