@@ -38,7 +38,7 @@ public class Renaming {
       this.from = FileCommands.fileName(fromPath).replace("-", "$");
       this.to = FileCommands.fileName(toPath).replace("-", "$");
       this.pkgs = new LinkedList<String>();
-      for (String pkg : fromPath.split(File.separator))
+      for (String pkg : fromPath.split("/"))
         this.pkgs.add(pkg);
       this.pkgs.remove(this.pkgs.size() - 1);
     }
@@ -88,9 +88,9 @@ public class Renaming {
     if (in.equals(ren.from))
       return ren.to;
     
-    String prefix = StringCommands.printListSeparated(ren.pkgs, File.separator);
-    if (in.equals(prefix + File.separator + ren.from))
-      return prefix + File.separator + ren.to;
+    String prefix = StringCommands.printListSeparated(ren.pkgs, "/");
+    if (in.equals(prefix + "/" + ren.from))
+      return prefix + "/" + ren.to;
     
     return in;
   }

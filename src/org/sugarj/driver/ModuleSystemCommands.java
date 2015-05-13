@@ -199,7 +199,7 @@ public class ModuleSystemCommands {
 
   private static RelativePath searchFile(Path base, String relativePath, String extension, Result driverResult) {
     if (relativePath.startsWith(base.getAbsolutePath())) {
-      int sepOffset = relativePath.endsWith(File.separator) ? 0 : 1;
+      int sepOffset = relativePath.endsWith("/") ? 0 : 1;
       relativePath = relativePath.substring(base.getAbsolutePath().length() + sepOffset);
     }
     
