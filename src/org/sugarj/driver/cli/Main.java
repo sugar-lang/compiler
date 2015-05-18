@@ -54,6 +54,8 @@ public class Main {
       
       IProgressMonitor monitor = new NullProgressMonitor();
       
+      DriverCLI.CLI_ExitValue overallReturnValue = DriverCLI.CLI_ExitValue.SUCCESS;
+      
       for (final RelativePath sourceFile : allInputFiles) {
         AbstractBaseLanguage lang = BaseLanguageRegistry.getInstance().getBaseLanguage(FileCommands.getExtension(sourceFile));
         if (null == lang)
@@ -62,23 +64,24 @@ public class Main {
         Result res = Driver.run(DriverParameters.create(environment, lang, sourceFile, monitor));
     
         DriverCLI.CLI_ExitValue returnValue = DriverCLI.processResultCLI(res, sourceFile, new File(".").getAbsolutePath());
-        switch (returnValue) {
-        case SUCCESS:
-          exit (0, environment);
-        case COMPILATION_ERROR:
-          exit (1, environment);
-        case DSL_ANALYSIS_ERROR:
-          exit (2, environment);
-        case DSL_ANALYSIS_WARNING:
-          exit (3, environment);
-        case DSL_ANALYSIS_NOTE:
-          exit (4, environment);
-        case FAILURE: 
-        default:
-          exit (100, environment);
-        }
+        overallReturnValue = overallReturnValue.join(returnValue);
       }
       
+      switch (overallReturnValue) {
+      case SUCCESS:
+        exit (0, environment);
+      case COMPILATION_ERROR:
+        exit (1, environment);
+      case DSL_ANALYSIS_ERROR:
+        exit (2, environment);
+      case DSL_ANALYSIS_WARNING:
+        exit (3, environment);
+      case DSL_ANALYSIS_NOTE:
+        exit (4, environment);
+      case FAILURE: 
+      default:
+        exit (100, environment);
+      }
     } catch (Exception e) {
       e.printStackTrace();
       exit(100, environment);

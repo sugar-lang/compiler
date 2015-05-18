@@ -41,6 +41,7 @@ import org.sugarj.driver.Result;
 import org.sugarj.driver.Result.CompilerMode;
 import org.sugarj.driver.Result.EditorMode;
 import org.sugarj.driver.STRCommands;
+import org.sugarj.driver.cli.DriverCLI.CLI_ExitValue;
 import org.sugarj.transformations.analysis.AnalysisDataInterop;
 
 /**
@@ -81,7 +82,13 @@ public class DriverCLI {
   }
   
   public static enum CLI_ExitValue {
-    SUCCESS, COMPILATION_ERROR, DSL_ANALYSIS_ERROR, DSL_ANALYSIS_WARNING, DSL_ANALYSIS_NOTE, FAILURE;
+    SUCCESS, DSL_ANALYSIS_NOTE, DSL_ANALYSIS_WARNING, DSL_ANALYSIS_ERROR, COMPILATION_ERROR, FAILURE;
+
+    public CLI_ExitValue join(CLI_ExitValue other) {
+      if (this.compareTo(other) < 0)
+        return other;
+      return this;
+    }
   }
   
   public static CLI_ExitValue processResultCLI(Result res, Path file, String project) throws IOException {
