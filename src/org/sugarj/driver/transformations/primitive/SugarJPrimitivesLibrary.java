@@ -17,6 +17,7 @@ public class SugarJPrimitivesLibrary extends AbstractStrategoOperatorRegistry {
     add(new IsLastToplevelDeclaration(driver));
     add(new GeneratePPTable(driver));
     add(new PrettyPrint(driver));
+    add(new SXBaseLangPrettyPrint(driver));
     add(new ATermToString());
 //    add(new CurrentPackage(driver));
 //    add(new CurrentModule(driver));
