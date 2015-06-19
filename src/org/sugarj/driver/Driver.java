@@ -1091,7 +1091,8 @@ public class Driver {
 
       String sdfSource = SDFCommands.makePermissiveSdf(sdfExtensionHead + sdfExtensionContent);
       driverResult.generateFile(sdfExtension, sdfSource);
-      availableSDFImports.add(fullExtName);
+      if (!availableSDFImports.contains(fullExtName))
+        availableSDFImports.add(fullExtName);
       
       if (CommandExecution.FULL_COMMAND_LINE)
         log.log("Wrote SDF file to '" + sdfExtension.getAbsolutePath() + "'.", Log.DETAIL);
@@ -1116,8 +1117,9 @@ public class Driver {
         
       
       driverResult.generateFile(strExtension, strExtensionContent);
-      availableSTRImports.add(fullExtName);
-      
+      if (!availableSTRImports.contains(fullExtName))
+        availableSTRImports.add(fullExtName);
+
       if (CommandExecution.FULL_COMMAND_LINE)
         log.log("Wrote Stratego file to '" + strExtension.getAbsolutePath() + "'.", Log.DETAIL);
       
