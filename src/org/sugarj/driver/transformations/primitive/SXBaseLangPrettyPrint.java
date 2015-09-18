@@ -21,7 +21,6 @@ public class SXBaseLangPrettyPrint extends AbstractPrimitive {
 
   @Override
   public boolean call(IContext ctx, Strategy[] arg1, IStrategoTerm[] arg2) throws InterpreterException {
-    System.out.println("sx base lang pretty print");
     Class<?> cls = baseProcessor.getClass();
     Method[] methods = cls.getMethods();
     boolean hasPrettyPrint = false;
@@ -34,12 +33,10 @@ public class SXBaseLangPrettyPrint extends AbstractPrimitive {
         i++;
     }
     if (hasPrettyPrint) {
-      System.out.println("found prettyPrint");
       try {
         IStrategoTerm term = ctx.current();
         Object result = methods[i].invoke(baseProcessor, term);
         String text = (String) result;
-        System.out.println("pretty print result: " + text);
         ctx.setCurrent(ATermCommands.makeString(text));
         return true;
       } catch (Exception e) {
